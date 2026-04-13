@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "856901465837",
+    "project_id": "vamonessa-bdcdc",
+    "storage_bucket": "vamonessa-bdcdc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:856901465837:android:e376309b8577facb713ee4",
+        "android_client_info": {
+          "package_name": "com.example.vamonessa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHZ0gJxfqqpGmoV4K-yg25eDNJA88Vp44"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

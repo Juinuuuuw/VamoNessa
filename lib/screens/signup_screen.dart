@@ -1,6 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import '../models/user.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -18,10 +18,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
   String? _errorMessage;
-
-  final AuthService _authService = AuthService();
 
   @override
   void dispose() {
@@ -42,26 +41,41 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _errorMessage = null;
     });
 
-    final user = User(
-      firstName: _firstNameController.text.trim(),
-      lastName: _lastNameController.text.trim(),
-      email: _emailController.text.trim(),
-      birthDate: _birthDateController.text.trim(),
-      phone: _phoneController.text.trim(),
-    );
-
-    final result = await _authService.register(user, _passwordController.text);
-
-    setState(() => _isLoading = false);
-
-    if (result['success']) {
-      // Cadastro bem-sucedido – navegue para Login ou Home
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Conta criada com sucesso!')),
+    try {
+      final User? user = await _authService.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        birthDate: _birthDateController.text.trim(),
+        phone: _phoneController.text.trim(),
       );
-      Navigator.pop(context); // volta para a tela de login
-    } else {
-      setState(() => _errorMessage = result['message']);
+
+      if (user != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Conta criada com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context); // volta para a tela de login
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Erro ao criar conta.';
+      if (e.code == 'email-already-in-use') {
+        message = 'Este e-mail já está cadastrado.';
+      } else if (e.code == 'weak-password') {
+        message = 'A senha deve ter pelo menos 6 caracteres.';
+      } else if (e.code == 'invalid-email') {
+        message = 'E-mail inválido.';
+      }
+      setState(() => _errorMessage = message);
+    } catch (e) {
+      setState(() => _errorMessage = 'Ocorreu um erro inesperado. Tente novamente.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -74,7 +88,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Senha obrigatória';
-    if (value.length < 6) return 'A senha deve ter pelo menos 6 caracteres';
+    if (value.length < 6) return 'Mínimo de 6 caracteres';
     return null;
   }
 
@@ -83,6 +97,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
     // Aceita formatos como (99) 99999-9999 ou 999999999
     final phoneRegex = RegExp(r'^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$');
     if (!phoneRegex.hasMatch(value)) return 'Telefone inválido';
+    return null;
+  }
+
+  String? _validateRequired(String? value, String fieldName) {
+    if (value == null || value.isEmpty) return '$fieldName obrigatório';
     return null;
   }
 
@@ -100,37 +119,47 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 40),
                 const Text(
                   'Sign Up',
-                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Create an account to continue!',
-                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
                 const SizedBox(height: 40),
 
                 // First Name
                 TextFormField(
                   controller: _firstNameController,
-                  decoration: _inputDecoration('First Name'),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Nome obrigatório' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'First Name',
+                  ),
+                  validator: (v) => _validateRequired(v, 'Nome'),
                 ),
                 const SizedBox(height: 16),
 
                 // Last Name
                 TextFormField(
                   controller: _lastNameController,
-                  decoration: _inputDecoration('Last Name'),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Sobrenome obrigatório' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Last Name',
+                  ),
+                  validator: (v) => _validateRequired(v, 'Sobrenome'),
                 ),
                 const SizedBox(height: 16),
 
                 // E-mail
                 TextFormField(
                   controller: _emailController,
-                  decoration: _inputDecoration('E-mail'),
+                  decoration: const InputDecoration(
+                    labelText: 'E-mail',
+                  ),
                   keyboardType: TextInputType.emailAddress,
                   validator: _validateEmail,
                 ),
@@ -139,19 +168,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 // Birth Date
                 TextFormField(
                   controller: _birthDateController,
-                  decoration: _inputDecoration(
-                    'Birth Date',
-                    hint: 'DD/MM/YYYY',
+                  decoration: const InputDecoration(
+                    labelText: 'Birth Date',
+                    hintText: 'DD/MM/YYYY',
                   ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Data obrigatória' : null,
+                  validator: (v) => _validateRequired(v, 'Data de nascimento'),
                 ),
                 const SizedBox(height: 16),
 
                 // Phone Number
                 TextFormField(
                   controller: _phoneController,
-                  decoration: _inputDecoration('Phone Number'),
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                  ),
                   keyboardType: TextInputType.phone,
                   validator: _validatePhone,
                 ),
@@ -161,7 +191,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: _inputDecoration('Password'),
+                  decoration: const InputDecoration(
+                    labelText: 'Password',
+                  ),
                   validator: _validatePassword,
                 ),
                 const SizedBox(height: 8),
@@ -211,7 +243,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Login link
+                // Link para Login
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -220,7 +252,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       style: TextStyle(color: Colors.grey.shade600),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                       child: const Text(
                         'Login',
                         style: TextStyle(fontWeight: FontWeight.bold),
@@ -234,14 +268,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, {String? hint}) {
-    return InputDecoration(
-      labelText: label,
-      hintText: hint,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 }

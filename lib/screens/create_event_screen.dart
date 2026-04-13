@@ -770,7 +770,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   Widget _buildLaunchEventButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: _launchEvent,
@@ -1537,7 +1537,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         ),
                     ],
                   ),
-                )).toList(),
+                )),
               ],
             ),
           ),
