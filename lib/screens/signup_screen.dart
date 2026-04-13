@@ -53,12 +53,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (user != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Conta criada com sucesso!'),
-            backgroundColor: Colors.green,
-          ),
+          const SnackBar(content: Text('Conta criada com sucesso!')),
         );
-        Navigator.pop(context); // volta para a tela de login
+        Navigator.pop(context);
       }
     } on FirebaseAuthException catch (e) {
       String message = 'Erro ao criar conta.';
@@ -71,7 +68,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
       setState(() => _errorMessage = message);
     } catch (e) {
-      setState(() => _errorMessage = 'Ocorreu um erro inesperado. Tente novamente.');
+      setState(() => _errorMessage = 'Ocorreu um erro inesperado.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -94,7 +91,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   String? _validatePhone(String? value) {
     if (value == null || value.isEmpty) return 'Telefone obrigatório';
-    // Aceita formatos como (99) 99999-9999 ou 999999999
     final phoneRegex = RegExp(r'^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$');
     if (!phoneRegex.hasMatch(value)) return 'Telefone inválido';
     return null;
@@ -119,53 +115,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 40),
                 const Text(
                   'Sign Up',
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Create an account to continue!',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 40),
-
-                // First Name
                 TextFormField(
                   controller: _firstNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'First Name',
-                  ),
+                  decoration: const InputDecoration(labelText: 'First Name'),
                   validator: (v) => _validateRequired(v, 'Nome'),
                 ),
                 const SizedBox(height: 16),
-
-                // Last Name
                 TextFormField(
                   controller: _lastNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Last Name',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Last Name'),
                   validator: (v) => _validateRequired(v, 'Sobrenome'),
                 ),
                 const SizedBox(height: 16),
-
-                // E-mail
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'E-mail',
-                  ),
+                  decoration: const InputDecoration(labelText: 'E-mail'),
                   keyboardType: TextInputType.emailAddress,
                   validator: _validateEmail,
                 ),
                 const SizedBox(height: 16),
-
-                // Birth Date
                 TextFormField(
                   controller: _birthDateController,
                   decoration: const InputDecoration(
@@ -175,30 +151,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   validator: (v) => _validateRequired(v, 'Data de nascimento'),
                 ),
                 const SizedBox(height: 16),
-
-                // Phone Number
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone Number',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Phone Number'),
                   keyboardType: TextInputType.phone,
                   validator: _validatePhone,
                 ),
                 const SizedBox(height: 16),
-
-                // Password
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Password'),
                   validator: _validatePassword,
                 ),
-                const SizedBox(height: 8),
-
-                // Mensagem de erro
                 if (_errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
@@ -207,10 +172,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   ),
-
                 const SizedBox(height: 32),
-
-                // Botão Register
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -242,8 +204,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Link para Login
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -252,9 +212,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       style: TextStyle(color: Colors.grey.shade600),
                     ),
                     TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed: () => Navigator.pop(context),
                       child: const Text(
                         'Login',
                         style: TextStyle(fontWeight: FontWeight.bold),

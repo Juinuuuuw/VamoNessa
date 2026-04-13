@@ -5,7 +5,6 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Registra um novo usuário com e-mail e senha
   Future<User?> signUp({
     required String email,
     required String password,
@@ -15,15 +14,11 @@ class AuthService {
     required String phone,
   }) async {
     try {
-      // 1. Criar usuário no Firebase Auth
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-
       User? user = userCredential.user;
-
-      // 2. Salvar dados adicionais no Firestore
       if (user != null) {
         await _firestore.collection('users').doc(user.uid).set({
           'first_name': firstName,
@@ -34,16 +29,12 @@ class AuthService {
           'created_at': FieldValue.serverTimestamp(),
         });
       }
-
       return user;
-    } on FirebaseAuthException {
-      rethrow;
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Login com e-mail e senha
   Future<User?> signIn(String email, String password) async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -56,11 +47,17 @@ class AuthService {
     }
   }
 
-  /// Logout
   Future<void> signOut() async {
     await _auth.signOut();
   }
 
-  /// Stream que monitora o estado de autenticação
   Stream<User?> get user => _auth.authStateChanges();
+
+  // Método para obter os dados do usuário atual do Firestore
+  Future<Map<String, dynamic>?> getCurrentUserData() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    return doc.data();
+  }
 }

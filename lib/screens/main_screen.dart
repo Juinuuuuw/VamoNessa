@@ -1,4 +1,7 @@
+// lib/screens/main_screen.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -8,35 +11,51 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  // Controle da aba selecionada (0 = HOME)
   int _currentNavIndex = 0;
+  String _userName = '';
+  final AuthService _authService = AuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final data = await _authService.getCurrentUserData();
+    if (data != null && mounted) {
+      setState(() {
+        _userName = data['first_name'] ?? 'Usuário';
+      });
+    }
+  }
+
+  Future<void> _logout() async {
+    await _authService.signOut();
+    // O StreamBuilder no main.dart redireciona automaticamente para LoginScreen
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Gradiente de fundo da tela inteira
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF7DFCA), // Tom pêssego/laranja claro
-            Color(0xFFE8E2FF), // Tom roxo/azul claro
-            Color(0xFFD4C8FF), // Tom roxo mais escuro na ponta inferior
-          ],
+          colors: [Color(0xFFF7DFCA), Color(0xFFE8E2FF), Color(0xFFD4C8FF)],
         ),
       ),
       child: Scaffold(
-        backgroundColor: Colors.transparent, // Transparente para mostrar o gradiente
-        extendBody: true, // Permite que o corpo passe por baixo da navbar transparente
+        backgroundColor: Colors.transparent,
+        extendBody: true,
         body: SafeArea(
-          bottom: false, // Desativa a safe area em baixo para a navbar flutuante
+          bottom: false,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header (Saudação e Avatar)
+                // Header com saudação, avatar e logout
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,9 +64,9 @@ class _MainScreenState extends State<MainScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Hello, Ebony 👋',
-                            style: TextStyle(
+                          Text(
+                            'Hello, $_userName 👋',
+                            style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
@@ -65,11 +84,20 @@ class _MainScreenState extends State<MainScreen> {
                         ],
                       ),
                     ),
-                    const CircleAvatar(
-                      radius: 24,
-                      backgroundImage: NetworkImage(
-                        'https://images.unsplash.com/photo-1534528741775-53994a69daEB?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80',
-                      ),
+                    Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 24,
+                          backgroundImage: NetworkImage(
+                            'https://images.unsplash.com/photo-1534528741775-53994a69daEB?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80',
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.logout, color: Colors.black54),
+                          onPressed: _logout,
+                          tooltip: 'Sair',
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -84,8 +112,15 @@ class _MainScreenState extends State<MainScreen> {
                   child: TextField(
                     decoration: InputDecoration(
                       hintText: 'Search events...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey.shade400, size: 20),
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.grey.shade400,
+                        size: 20,
+                      ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -93,7 +128,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Botões de ação com FittedBox para evitar erro de overflow (tela pequena)
+                // Botões de ação
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Row(
@@ -131,7 +166,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Título Your Events
+                // Título "Your Events"
                 const Text(
                   'Your Events',
                   style: TextStyle(
@@ -144,7 +179,8 @@ class _MainScreenState extends State<MainScreen> {
 
                 // Lista de eventos
                 _EventCard(
-                  imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
                   title: 'Viagem Para Natal',
                   date: '12 - 15 Dezembro',
                   participants: 5,
@@ -152,10 +188,11 @@ class _MainScreenState extends State<MainScreen> {
                   badgeColor: const Color(0xFFFFD48F),
                   badgeTextColor: const Color(0xFFD6942C),
                   badgeIcon: Icons.access_time,
-                  onTap: () => Navigator.pushNamed(context, '/inside_event'), // Navegação adicionada
+                  onTap: () => Navigator.pushNamed(context, '/inside_event'),
                 ),
                 _EventCard(
-                  imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
                   title: 'Aniversário da Ana',
                   date: '20 de Julho',
                   participants: 6,
@@ -163,10 +200,11 @@ class _MainScreenState extends State<MainScreen> {
                   badgeColor: const Color(0xFFB1FFC8),
                   badgeTextColor: const Color(0xFF34A853),
                   badgeIcon: Icons.check,
-                  onTap: () => Navigator.pushNamed(context, '/inside_event'), // Navegação adicionada
+                  onTap: () => Navigator.pushNamed(context, '/inside_event'),
                 ),
                 _EventCard(
-                  imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
                   title: 'Projeto Integrador',
                   date: 'Até 30 de Agosto',
                   participants: 4,
@@ -174,11 +212,11 @@ class _MainScreenState extends State<MainScreen> {
                   badgeColor: const Color(0xFFBBE5FF),
                   badgeTextColor: const Color(0xFF4A90E2),
                   badgeIcon: Icons.edit_calendar_outlined,
-                  onTap: () => Navigator.pushNamed(context, '/inside_event'), // Navegação adicionada
+                  onTap: () => Navigator.pushNamed(context, '/inside_event'),
                 ),
                 const SizedBox(height: 24),
 
-                // Título Recent Activities
+                // Título "Recent Activities"
                 const Text(
                   'Recent Activities',
                   style: TextStyle(
@@ -189,7 +227,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Container Branco para Atividades Recentes
+                // Container de atividades recentes
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -198,39 +236,40 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                   child: Column(
                     children: [
-                      const _ActivityItem(
-                        text: 'The creature voted for the beach for the Trip to Natal event.',
+                      _ActivityItem(
+                        text:
+                            'The creature voted for the beach for the Trip to Natal event.',
                         time: '5 hours ago',
                       ),
-                      const _ActivityItem(
-                        text: 'Ana suggested "July 20th" for Aniversário da Ana event.',
+                      _ActivityItem(
+                        text:
+                            'Ana suggested "July 20th" for Aniversário da Ana event.',
                         time: '3 hours ago',
                       ),
-                      const _ActivityItem(
+                      _ActivityItem(
                         text: 'João completed "Buy decorations" task',
                         time: '2 hours ago',
                       ),
-                      const _ActivityItem(
-                        text: 'Maria invited 3 new participants to Projeto Integrador',
+                      _ActivityItem(
+                        text:
+                            'Maria invited 3 new participants to Projeto Integrador',
                         time: '1 hour ago',
                         isLast: true,
                       ),
                     ],
                   ),
                 ),
-                // Espaço extra no final para a lista não ficar escondida atrás do footer flutuante
-                const SizedBox(height: 120), 
+                // Espaço extra para o footer flutuante
+                const SizedBox(height: 120),
               ],
             ),
           ),
         ),
-        // Novo Footer Padronizado
+        // Barra de navegação inferior personalizada
         bottomNavigationBar: _buildCustomBottomNav(),
       ),
     );
   }
-
-  // --- Widgets do Footer integrados ---
 
   Widget _buildCustomBottomNav() {
     return Container(
@@ -242,7 +281,11 @@ class _MainScreenState extends State<MainScreen> {
           topRight: Radius.circular(40),
         ),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
         ],
       ),
       child: Row(
@@ -260,13 +303,15 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildNavItem(IconData icon, String label, int index) {
     bool isActive = _currentNavIndex == index;
     return GestureDetector(
-      onTap: () {
-        setState(() => _currentNavIndex = index);
-      },
+      onTap: () => setState(() => _currentNavIndex = index),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400, size: 24),
+          Icon(
+            icon,
+            color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
+            size: 24,
+          ),
           const SizedBox(height: 4),
           Text(
             label,
@@ -295,7 +340,14 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             Icon(Icons.add_circle, color: Colors.white),
             SizedBox(height: 4),
-            Text('CREATE', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            Text(
+              'CREATE',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
@@ -303,7 +355,8 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// Botão de ação (quadrados arredondados)
+// ------------------ Widgets Auxiliares ------------------
+
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -344,7 +397,6 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// Card de evento remodelado
 class _EventCard extends StatelessWidget {
   final String imageUrl;
   final String title;
@@ -354,7 +406,7 @@ class _EventCard extends StatelessWidget {
   final Color badgeColor;
   final Color badgeTextColor;
   final IconData badgeIcon;
-  final VoidCallback onTap; // Parâmetro novo para permitir clique
+  final VoidCallback onTap;
 
   const _EventCard({
     required this.imageUrl,
@@ -370,7 +422,7 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector( // Envolvendo com GestureDetector para o clique funcionar
+    return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -408,27 +460,47 @@ class _EventCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey.shade500),
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 14,
+                        color: Colors.grey.shade500,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         date,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Text('|', style: TextStyle(color: Colors.grey.shade400)),
+                        child: Text(
+                          '|',
+                          style: TextStyle(color: Colors.grey.shade400),
+                        ),
                       ),
-                      Icon(Icons.people_alt_outlined, size: 14, color: Colors.grey.shade500),
+                      Icon(
+                        Icons.people_alt_outlined,
+                        size: 14,
+                        color: Colors.grey.shade500,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '$participants',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeColor,
                       borderRadius: BorderRadius.circular(20),
@@ -459,7 +531,6 @@ class _EventCard extends StatelessWidget {
   }
 }
 
-// Item de atividade recente
 class _ActivityItem extends StatelessWidget {
   final String text;
   final String time;
@@ -504,10 +575,7 @@ class _ActivityItem extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   time,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade400,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                 ),
               ],
             ),
