@@ -1,7 +1,10 @@
 // lib/screens/main_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../models/event.dart';
 import '../services/auth_service.dart';
+import '../services/event_service.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -14,18 +17,48 @@ class _MainScreenState extends State<MainScreen> {
   int _currentNavIndex = 0;
   String _userName = '';
   final AuthService _authService = AuthService();
+  final EventService _eventService = EventService();
 
   @override
   void initState() {
     super.initState();
     _loadUserName();
+
+    // Listener para mudanças de autenticação
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user != null && mounted) {
+        setState(() {
+          // Força a reconstrução do StreamBuilder
+        });
+      }
+    });
   }
 
   Future<void> _loadUserName() async {
-    final data = await _authService.getCurrentUserData();
-    if (data != null && mounted) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists && mounted) {
+        final data = doc.data();
+        setState(() {
+          _userName =
+              data?['first_name'] ?? user.email?.split('@').first ?? 'Usuário';
+        });
+      } else {
+        setState(() {
+          _userName = user.email?.split('@').first ?? 'Usuário';
+        });
+      }
+    } catch (e) {
+      print('DEBUG MainScreen: Erro ao carregar nome do usuário: $e');
       setState(() {
-        _userName = data['first_name'] ?? 'Usuário';
+        _userName = user.email?.split('@').first ?? 'Usuário';
       });
     }
   }
@@ -33,6 +66,17 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _logout() async {
     await _authService.signOut();
     // O StreamBuilder no main.dart redireciona automaticamente para LoginScreen
+  }
+
+  void _debugPrintEvents(List<Event> events) {
+    final user = FirebaseAuth.instance.currentUser;
+    print('=== DEBUG MainScreen: Eventos para o usuário ${user?.uid} ===');
+    for (var event in events) {
+      print('Evento: ${event.title}');
+      print('Participantes UIDs: ${event.participants}');
+      print('Status: ${event.status}');
+      print('---');
+    }
   }
 
   @override
@@ -74,7 +118,7 @@ class _MainScreenState extends State<MainScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            "Let's create amazings experiences\ntogether!",
+                            "Let's create amazing experiences\ntogether!",
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey.shade700,
@@ -139,6 +183,8 @@ class _MainScreenState extends State<MainScreen> {
                         label: 'Add Events',
                         backgroundColor: const Color(0xFFE2E0FF),
                         iconColor: const Color(0xFF8B80F9),
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/create_event'),
                       ),
                       const SizedBox(width: 12),
                       _ActionButton(
@@ -146,6 +192,16 @@ class _MainScreenState extends State<MainScreen> {
                         label: 'Invite',
                         backgroundColor: const Color(0xFFFFF0E3),
                         iconColor: const Color(0xFFF9A866),
+                        onTap: () {
+                          // TODO: implementar convite
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Funcionalidade em desenvolvimento',
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(width: 12),
                       _ActionButton(
@@ -153,6 +209,16 @@ class _MainScreenState extends State<MainScreen> {
                         label: 'My Tasks',
                         backgroundColor: const Color(0xFFE0F9ED),
                         iconColor: const Color(0xFF4AC48B),
+                        onTap: () {
+                          // TODO: implementar tarefas
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Funcionalidade em desenvolvimento',
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(width: 12),
                       _ActionButton(
@@ -160,6 +226,16 @@ class _MainScreenState extends State<MainScreen> {
                         label: 'Notifications',
                         backgroundColor: const Color(0xFFFFEAE9),
                         iconColor: const Color(0xFFF28B82),
+                        onTap: () {
+                          // TODO: implementar notificações
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Funcionalidade em desenvolvimento',
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -177,42 +253,97 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Lista de eventos
-                _EventCard(
-                  imageUrl:
-                      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                  title: 'Viagem Para Natal',
-                  date: '12 - 15 Dezembro',
-                  participants: 5,
-                  badgeText: 'Em votação',
-                  badgeColor: const Color(0xFFFFD48F),
-                  badgeTextColor: const Color(0xFFD6942C),
-                  badgeIcon: Icons.access_time,
-                  onTap: () => Navigator.pushNamed(context, '/inside_event'),
-                ),
-                _EventCard(
-                  imageUrl:
-                      'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                  title: 'Aniversário da Ana',
-                  date: '20 de Julho',
-                  participants: 6,
-                  badgeText: 'Confirmado',
-                  badgeColor: const Color(0xFFB1FFC8),
-                  badgeTextColor: const Color(0xFF34A853),
-                  badgeIcon: Icons.check,
-                  onTap: () => Navigator.pushNamed(context, '/inside_event'),
-                ),
-                _EventCard(
-                  imageUrl:
-                      'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-                  title: 'Projeto Integrador',
-                  date: 'Até 30 de Agosto',
-                  participants: 4,
-                  badgeText: 'Planejando',
-                  badgeColor: const Color(0xFFBBE5FF),
-                  badgeTextColor: const Color(0xFF4A90E2),
-                  badgeIcon: Icons.edit_calendar_outlined,
-                  onTap: () => Navigator.pushNamed(context, '/inside_event'),
+                // Lista dinâmica de eventos
+                StreamBuilder<List<Event>>(
+                  stream: _eventService.getUserEvents(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      print(
+                        'DEBUG MainScreen: Erro no StreamBuilder: ${snapshot.error}',
+                      );
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Erro ao carregar eventos: ${snapshot.error}',
+                              style: const TextStyle(color: Colors.red),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final events = snapshot.data ?? [];
+
+                    // Debug
+                    _debugPrintEvents(events);
+
+                    if (events.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.event_busy,
+                                size: 64,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Você ainda não tem eventos.',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey.shade600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Toque em "Add Events" para criar um!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: events
+                          .map((event) => _buildEventCard(event))
+                          .toList(),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
 
@@ -227,14 +358,14 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Container de atividades recentes
+                // Container de atividades recentes (estático por enquanto)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Column(
+                  child: const Column(
                     children: [
                       _ActivityItem(
                         text:
@@ -268,6 +399,51 @@ class _MainScreenState extends State<MainScreen> {
         // Barra de navegação inferior personalizada
         bottomNavigationBar: _buildCustomBottomNav(),
       ),
+    );
+  }
+
+  Widget _buildEventCard(Event event) {
+    // Define cores e ícones baseados no status
+    Color badgeColor;
+    Color badgeTextColor;
+    IconData badgeIcon;
+    String badgeText;
+
+    switch (event.status) {
+      case 'voting':
+        badgeColor = const Color(0xFFFFD48F);
+        badgeTextColor = const Color(0xFFD6942C);
+        badgeIcon = Icons.how_to_vote;
+        badgeText = 'Em votação';
+        break;
+      case 'confirmed':
+        badgeColor = const Color(0xFFB1FFC8);
+        badgeTextColor = const Color(0xFF34A853);
+        badgeIcon = Icons.check_circle;
+        badgeText = 'Confirmado';
+        break;
+      default:
+        badgeColor = const Color(0xFFBBE5FF);
+        badgeTextColor = const Color(0xFF4A90E2);
+        badgeIcon = Icons.edit_calendar;
+        badgeText = 'Planejando';
+    }
+
+    return _EventCard(
+      imageUrl: event.imageUrl.isNotEmpty
+          ? event.imageUrl
+          : 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+      title: event.title,
+      date:
+          '${event.startDate.day}/${event.startDate.month} - ${event.endDate.day}/${event.endDate.month}',
+      participants: event.participants.length,
+      badgeText: badgeText,
+      badgeColor: badgeColor,
+      badgeTextColor: badgeTextColor,
+      badgeIcon: badgeIcon,
+      onTap: () {
+        Navigator.pushNamed(context, '/inside_event', arguments: event.id);
+      },
     );
   }
 
@@ -362,37 +538,42 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final Color backgroundColor;
   final Color iconColor;
+  final VoidCallback onTap;
 
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.backgroundColor,
     required this.iconColor,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, size: 28, color: iconColor),
           ),
-          child: Icon(icon, size: 28, color: iconColor),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -430,6 +611,13 @@ class _EventCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,6 +629,18 @@ class _EventCard extends StatelessWidget {
                 width: 85,
                 height: 85,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 85,
+                    height: 85,
+                    color: Colors.grey.shade200,
+                    child: Icon(
+                      Icons.event,
+                      color: Colors.grey.shade400,
+                      size: 32,
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 16),
@@ -456,6 +656,8 @@ class _EventCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
                   Row(

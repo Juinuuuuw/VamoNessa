@@ -22,7 +22,6 @@ class MyApp extends StatelessWidget {
       title: 'Vamo Nessa',
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       debugShowCheckedModeBanner: false,
-      // O home com StreamBuilder controla o fluxo de autenticação automaticamente
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
@@ -38,13 +37,31 @@ class MyApp extends StatelessWidget {
           );
         },
       ),
-      // Rotas nomeadas para navegação secundária
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/signup': (context) => const SignUpScreen(),
-        '/main': (context) => const MainScreen(),
-        '/create_event': (context) => const CreateEventScreen(),
-        '/inside_event': (context) => const EventDetailsScreen(),
+      // Usar onGenerateRoute para suportar argumentos
+      onGenerateRoute: (settings) {
+        if (settings.name == '/inside_event') {
+          final eventId = settings.arguments as String;
+          return MaterialPageRoute(
+            builder: (context) => EventDetailsScreen(eventId: eventId),
+          );
+        }
+        // Rotas simples (sem argumentos)
+        switch (settings.name) {
+          case '/login':
+            return MaterialPageRoute(builder: (_) => const LoginScreen());
+          case '/signup':
+            return MaterialPageRoute(builder: (_) => const SignUpScreen());
+          case '/main':
+            return MaterialPageRoute(builder: (_) => const MainScreen());
+          case '/create_event':
+            return MaterialPageRoute(builder: (_) => const CreateEventScreen());
+          default:
+            return MaterialPageRoute(
+              builder: (_) => const Scaffold(
+                body: Center(child: Text('Rota não encontrada')),
+              ),
+            );
+        }
       },
     );
   }
