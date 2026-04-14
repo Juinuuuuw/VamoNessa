@@ -479,7 +479,16 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildNavItem(IconData icon, String label, int index) {
     bool isActive = _currentNavIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _currentNavIndex = index),
+      onTap: () {
+        setState(() => _currentNavIndex = index);
+        // Navegação para as telas correspondentes
+        if (index == 0) {
+          // Já está na home, opcional
+        } else if (index == 3) {
+          Navigator.pushNamed(context, '/profile');
+        }
+        // Se houver outras telas (ex: SOCIAL), adicione aqui
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

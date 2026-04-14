@@ -23,6 +23,7 @@ class UserModel {
           ? '$firstName $lastName'
           : firstName!;
     }
+    // Se não tiver nome, usa a parte antes do @ do e-mail
     return email.split('@').first;
   }
 

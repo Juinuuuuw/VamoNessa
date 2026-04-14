@@ -9,19 +9,27 @@ class UserService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  /// Obtém o modelo do usuário atual
   Future<UserModel?> getCurrentUser() async {
     final user = _auth.currentUser;
     if (user == null) return null;
 
-    try {
-      final doc = await _firestore.collection('users').doc(user.uid).get();
-      if (!doc.exists) return null;
-      return UserModel.fromFirestore(doc);
-    } catch (e) {
-      print('Erro ao buscar usuário: $e');
-      return null;
+    final docRef = _firestore.collection('users').doc(user.uid);
+    final doc = await docRef.get();
+
+    if (!doc.exists) {
+      // Cria um documento básico com o e-mail
+      final email = user.email ?? '';
+      final newUser = UserModel(
+        uid: user.uid,
+        email: email,
+        firstName: email.split('@').first, // fallback inicial
+        lastName: '',
+      );
+      await docRef.set(newUser.toMap());
+      return newUser;
     }
+
+    return UserModel.fromFirestore(doc);
   }
 
   /// Atualiza nome e sobrenome
@@ -40,7 +48,8 @@ class UserService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Usuário não autenticado');
 
-    final fileName = 'profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final fileName =
+        'profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final ref = _storage.ref().child('profile_pictures/$fileName');
     await ref.putFile(imageFile);
     final downloadUrl = await ref.getDownloadURL();

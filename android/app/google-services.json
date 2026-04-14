@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "856901465837",
+    "firebase_url": "https://vamonessa-bdcdc-default-rtdb.firebaseio.com",
     "project_id": "vamonessa-bdcdc",
     "storage_bucket": "vamonessa-bdcdc.firebasestorage.app"
   },

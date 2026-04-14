@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/user_service.dart';
+import '../services/event_service.dart';
 import '../models/user.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -14,6 +15,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final UserService _userService = UserService();
+  final EventService _eventService = EventService();
   final ImagePicker _picker = ImagePicker();
 
   int _currentNavIndex = 3;
@@ -21,17 +23,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isUploading = false;
 
   UserModel? _user;
+  int _eventCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await _loadUser();
+    await _loadEventCount();
   }
 
   Future<void> _loadUser() async {
     final user = await _userService.getCurrentUser();
-    if (mounted) {
-      setState(() => _user = user);
+    if (mounted) setState(() => _user = user);
+  }
+
+  Future<void> _loadEventCount() async {
+    try {
+      final events = await _eventService.getUserEvents().first;
+      if (mounted) setState(() => _eventCount = events.length);
+    } catch (e) {
+      print('Erro ao carregar contagem de eventos: $e');
     }
   }
 
@@ -52,18 +67,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
         _isUploading = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Foto atualizada!')));
-      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Foto atualizada!')));
     } catch (e) {
       setState(() => _isUploading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erro ao enviar foto: $e')));
-      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao enviar foto: $e')));
     }
   }
 
@@ -126,17 +137,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   try {
                     await _userService.updateName(firstName, lastName);
                     await _loadUser();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Perfil atualizado!')),
-                      );
-                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Perfil atualizado!')),
+                    );
                   } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Erro: $e')));
-                    }
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Erro: $e')));
                   } finally {
                     setState(() => _isLoading = false);
                   }
@@ -159,7 +166,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _logout() async {
     await _userService.signOut();
-    // O StreamBuilder do main.dart redireciona automaticamente para LoginScreen
+    // O StreamBuilder no main.dart redireciona para LoginScreen
   }
 
   @override
@@ -185,7 +192,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Avatar com opção de trocar
+                // Avatar
                 Stack(
                   alignment: Alignment.bottomRight,
                   children: [
@@ -210,7 +217,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               _user?.photoUrl != null &&
                                   _user!.photoUrl!.isNotEmpty
                               ? NetworkImage(_user!.photoUrl!)
-                              : const AssetImage('assets/default_avatar.png')
+                              : const NetworkImage(
+                                      'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
+                                    )
                                     as ImageProvider,
                           child: _isUploading
                               ? Container(
@@ -244,7 +253,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Nome
+                // Nome e e-mail
                 Text(
                   _user?.displayName ?? 'Carregando...',
                   style: const TextStyle(
@@ -254,8 +263,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-
-                // Email
                 Text(
                   _user?.email ?? '',
                   style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
@@ -272,7 +279,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       horizontal: 32,
                       vertical: 12,
                     ),
-                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                     ),
@@ -284,7 +290,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Card de eventos (estático ou futuro contador real)
+                // Card de eventos (contagem real)
                 Container(
                   width: 160,
                   padding: const EdgeInsets.symmetric(vertical: 24),
@@ -314,13 +320,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        '0', // Pode ser substituído por contagem real depois
-                        style: TextStyle(
+                      Text(
+                        '$_eventCount',
+                        style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
-                          height: 1.0,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -353,7 +358,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Lista de opções
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -419,7 +423,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final Color iconBgColor = isDestructive
         ? Colors.red.shade50
         : Colors.grey.shade100;
-
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       leading: Container(
@@ -481,14 +484,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool isActive = _currentNavIndex == index;
     return GestureDetector(
       onTap: () {
-        if (index == 0) {
-          Navigator.pushReplacementNamed(context, '/main');
-        } else if (index == 2) {
-          // Navegar para tela social (futuro)
-        } else if (index == 3) {
-          // Já está no perfil
-        }
         setState(() => _currentNavIndex = index);
+        if (index == 0) Navigator.pushReplacementNamed(context, '/main');
+        // SOCIAL e outros podem ser adicionados depois
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
