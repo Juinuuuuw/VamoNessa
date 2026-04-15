@@ -166,7 +166,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _logout() async {
     await _userService.signOut();
-    // O StreamBuilder no main.dart redireciona para LoginScreen
+
+    // Navega para a tela de login e remove todas as rotas anteriores
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/login',
+        (route) => false,
+      );
+    }
   }
 
   @override

@@ -63,11 +63,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  Future<void> _logout() async {
-    await _authService.signOut();
-    // O StreamBuilder no main.dart redireciona automaticamente para LoginScreen
-  }
-
   void _debugPrintEvents(List<Event> events) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -103,7 +98,6 @@ class _MainScreenState extends State<MainScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header com saudação, avatar e logout
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,11 +133,6 @@ class _MainScreenState extends State<MainScreen> {
                           backgroundImage: NetworkImage(
                             'https://images.unsplash.com/photo-1534528741775-53994a69daEB?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80',
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.logout, color: Colors.black54),
-                          onPressed: _logout,
-                          tooltip: 'Sair',
                         ),
                       ],
                     ),
