@@ -1,7 +1,8 @@
 // lib/services/event_service.dart
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/event.dart'; // <-- Único import necessário
+import '../models/event.dart';
 
 class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -24,6 +25,33 @@ class EventService {
     await _firestore.collection('events').add(event.toMap());
   }
 
+  /// Gera um código de convite único de 6 caracteres
+  Future<String> _generateUniqueInviteCode() async {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final random = Random();
+    String code;
+    bool exists;
+    int attempts = 0;
+
+    do {
+      code = List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+      final query = await _firestore
+          .collection('events')
+          .where('inviteCode', isEqualTo: code)
+          .limit(1)
+          .get();
+      exists = query.docs.isNotEmpty;
+      attempts++;
+      if (attempts > 10) {
+        // Fallback: adiciona um timestamp para garantir unicidade
+        code = '${code.substring(0, 4)}${DateTime.now().millisecondsSinceEpoch % 100}';
+        break;
+      }
+    } while (exists);
+
+    return code;
+  }
+
   /// Cria um evento avançado com opções de data e local
   Future<String> createAdvancedEvent({
     required String title,
@@ -35,6 +63,9 @@ class EventService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Usuário não autenticado');
+
+    // Gera código único de convite
+    final inviteCode = await _generateUniqueInviteCode();
 
     final dateOptionsMap = dateOptions.map((d) {
       return {
@@ -72,6 +103,7 @@ class EventService {
       'createdBy': createdBy,
       'createdAt': FieldValue.serverTimestamp(),
       'status': 'voting',
+      'inviteCode': inviteCode,
     });
 
     return docRef.id;
@@ -90,5 +122,42 @@ class EventService {
         .map(
           (snapshot) => snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList(),
         );
+  }
+
+  /// Obtém o código de convite existente ou gera um novo
+  Future<String> getOrCreateInviteCode(String eventId) async {
+    final event = await getEventById(eventId);
+    if (event?.inviteCode != null && event!.inviteCode!.isNotEmpty) {
+      return event.inviteCode!;
+    }
+    final newCode = await _generateUniqueInviteCode();
+    await _firestore.collection('events').doc(eventId).update({'inviteCode': newCode});
+    return newCode;
+  }
+
+  /// Ingressa em um evento usando código de convite
+  Future<bool> joinEventWithCode(String inviteCode) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('Usuário não autenticado');
+
+    final query = await _firestore
+        .collection('events')
+        .where('inviteCode', isEqualTo: inviteCode)
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) return false;
+
+    final eventDoc = query.docs.first;
+    final eventData = eventDoc.data();
+    final List<String> participants = List<String>.from(eventData['participants'] ?? []);
+
+    if (participants.contains(user.uid)) {
+      return true;
+    }
+
+    participants.add(user.uid);
+    await eventDoc.reference.update({'participants': participants});
+    return true;
   }
 }

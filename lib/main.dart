@@ -6,7 +6,8 @@ import 'screens/signup_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/create_event_screen.dart';
 import 'screens/event_details_screen.dart';
-import 'screens/profile_screen.dart'; // ← NOVO IMPORT
+import 'screens/profile_screen.dart';
+import 'screens/join_event_screen.dart'; // ← NOVO IMPORT
 import 'firebase_options.dart';
 
 void main() async {
@@ -40,12 +41,21 @@ class MyApp extends StatelessWidget {
         },
       ),
       onGenerateRoute: (settings) {
+        // Rota com argumento (eventId)
         if (settings.name == '/inside_event') {
           final eventId = settings.arguments as String;
           return MaterialPageRoute(
             builder: (context) => EventDetailsScreen(eventId: eventId),
           );
         }
+        // Rota de convite (pode receber código via deep link)
+        if (settings.name == '/join') {
+          final code = settings.arguments as String?;
+          return MaterialPageRoute(
+            builder: (context) => JoinEventScreen(initialCode: code),
+          );
+        }
+        // Rotas simples
         switch (settings.name) {
           case '/login':
             return MaterialPageRoute(builder: (_) => const LoginScreen());
@@ -55,7 +65,7 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const MainScreen());
           case '/create_event':
             return MaterialPageRoute(builder: (_) => const CreateEventScreen());
-          case '/profile': // ← NOVA ROTA
+          case '/profile':
             return MaterialPageRoute(builder: (_) => const ProfileScreen());
           default:
             return MaterialPageRoute(

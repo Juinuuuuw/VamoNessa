@@ -976,18 +976,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_validateVenueForm(titleController, venueNameController, priceController)) {
+                        final priceValue = double.tryParse(priceController.text.replaceAll(',', '.')) ?? 0.0;
                         final newOption = VenueOption(
                           id: DateTime.now().millisecondsSinceEpoch.toString(),
                           title: titleController.text,
                           venueName: venueNameController.text,
                           venueLink: venueLinkController.text.isNotEmpty ? venueLinkController.text : null,
-                          price: double.parse(priceController.text),
+                          price: priceValue,
                           priceDetail: priceDetailController.text,
                           imageUrl: imageUrl ?? defaultImages[venueOptions.length % defaultImages.length],
                           activities: activities.where((a) => a.name.isNotEmpty).toList(),
                           scheduleName: scheduleName.isNotEmpty ? scheduleName : 'Cronograma Padrão',
                           scheduleActivities: scheduleActivities.where((a) => a.name.isNotEmpty).toList(),
-                          total: double.parse(priceController.text) * 1.5,
+                          total: priceValue * 1.5,
                         );
                         Navigator.pop(context, newOption);
                       }
@@ -1085,6 +1086,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     }
     if (price.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor, insira o preço')));
+      return false;
+    }
+    final priceValue = double.tryParse(price.text.replaceAll(',', '.'));
+    if (priceValue == null || priceValue < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Preço inválido. Use apenas números.')));
       return false;
     }
     return true;
@@ -1467,9 +1473,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () {
+                    final priceValue = double.tryParse(priceController.text.replaceAll(',', '.')) ?? option.price;
                     option.venueName = venueController.text;
                     option.venueLink = linkController.text.isNotEmpty ? linkController.text : null;
-                    option.price = double.parse(priceController.text);
+                    option.price = priceValue;
                     option.total = option.price * 1.5;
                     Navigator.pop(context, true);
                   },

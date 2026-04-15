@@ -70,7 +70,11 @@ class _MainScreenState extends State<MainScreen> {
 
   void _debugPrintEvents(List<Event> events) {
     final user = FirebaseAuth.instance.currentUser;
-    print('=== DEBUG MainScreen: Eventos para o usuário ${user?.uid} ===');
+    if (user == null) {
+      print('=== DEBUG MainScreen: Usuário deslogado, ignorando eventos ===');
+      return;
+    }
+    print('=== DEBUG MainScreen: Eventos para o usuário ${user.uid} ===');
     for (var event in events) {
       print('Evento: ${event.title}');
       print('Participantes UIDs: ${event.participants}');
@@ -192,16 +196,7 @@ class _MainScreenState extends State<MainScreen> {
                         label: 'Invite',
                         backgroundColor: const Color(0xFFFFF0E3),
                         iconColor: const Color(0xFFF9A866),
-                        onTap: () {
-                          // TODO: implementar convite
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Funcionalidade em desenvolvimento',
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: () => Navigator.pushNamed(context, '/join'),
                       ),
                       const SizedBox(width: 12),
                       _ActionButton(
