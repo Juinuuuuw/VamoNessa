@@ -1,10 +1,13 @@
+// lib/screens/event_details_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/event.dart';
-import '../models/poll.dart';
+import '../models/task.dart'; // necessário para a seção de tarefas
 import '../services/event_service.dart';
 import '../services/poll_service.dart';
+import '../services/task_service.dart'; // necessário para a seção de tarefas
 
 class EventDetailsScreen extends StatefulWidget {
   final String eventId;
@@ -18,6 +21,7 @@ class EventDetailsScreen extends StatefulWidget {
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
   final EventService _eventService = EventService();
   final PollService _pollService = PollService();
+  final TaskService _taskService = TaskService();
   int _currentNavIndex = 0;
 
   @override
@@ -45,6 +49,13 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               }
 
               final event = eventSnapshot.data!;
+              final currentUser = FirebaseAuth.instance.currentUser;
+
+              // Verificação de participante
+              if (currentUser == null ||
+                  !event.participants.contains(currentUser.uid)) {
+                return _buildNotParticipantView(event);
+              }
 
               return Column(
                 children: [
@@ -78,26 +89,26 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Banner do evento (dinâmico)
+                          // Banner do evento
                           _buildEventBanner(event),
                           const SizedBox(height: 32),
 
-                          // Votação de Locais
+                          // Votação de Locais (usando dados do evento)
                           _buildSectionHeader(
                             'Votação de Locais',
                             trailingText: _calculateDaysLeft(event.endDate),
                           ),
                           const SizedBox(height: 16),
-                          _buildLocationPollsSection(event.id),
+                          _buildVenueOptionsSection(event),
                           const SizedBox(height: 32),
 
-                          // Votação de Datas
+                          // Votação de Datas (usando dados do evento)
                           _buildSectionHeader('Datas'),
                           const SizedBox(height: 16),
-                          _buildDatePollsSection(event.id),
+                          _buildDateOptionsSection(event),
                           const SizedBox(height: 32),
 
-                          // Tendência do Grupo (simplificado)
+                          // Tendência do Grupo
                           _buildTrendCard(event),
                           const SizedBox(height: 32),
 
@@ -105,9 +116,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           _buildSectionHeader(
                             'Participantes',
                             trailingAction: 'Convidar +',
+                            onTrailingActionTap: () => _showInviteModal(event),
                           ),
                           const SizedBox(height: 16),
                           _buildParticipantsList(event.participants),
+
+                          // Seção de Tarefas (NOVO - adicionado da primeira versão)
+                          const SizedBox(height: 32),
+                          _buildTasksSection(event.id),
                         ],
                       ),
                     ),
@@ -119,6 +135,42 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         ),
       ),
       bottomNavigationBar: _buildCustomBottomNav(),
+    );
+  }
+
+  // ---------- VIEW PARA NÃO PARTICIPANTE ----------
+  Widget _buildNotParticipantView(Event event) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 24),
+            Text(
+              'Você não está participando deste evento.',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Peça ao organizador para adicionar você à lista de participantes.',
+              style: TextStyle(color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Voltar'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -220,266 +272,78 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ========== SEÇÃO DE LOCAIS (STREAM) ==========
-  Widget _buildLocationPollsSection(String eventId) {
-    return StreamBuilder<List<Poll>>(
-      stream: _pollService.getPollsByType(eventId, 'location'),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Text('Erro: ${snapshot.error}');
-        }
-
-        final polls = snapshot.data ?? [];
-
-        if (polls.isEmpty) {
-          return Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Center(child: Text('Nenhum local para votar ainda.')),
-          );
-        }
-
-        return Column(
-          children: polls.map((poll) {
-            final hasVoted = _pollService.hasUserVoted(poll);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: _buildVoteCard(
-                title: poll.title,
-                subtitle: poll.subtitle ?? '',
-                imageUrl: poll.imageUrl ?? '',
-                votes: poll.votes,
-                isVotedByMe: hasVoted,
-                onVote: () => _pollService.vote(eventId, poll.id),
-              ),
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
-
-  // ========== SEÇÃO DE DATAS (STREAM) ==========
-  Widget _buildDatePollsSection(String eventId) {
-    return StreamBuilder<List<Poll>>(
-      stream: _pollService.getPollsByType(eventId, 'date'),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Text('Erro: ${snapshot.error}');
-        }
-
-        final polls = snapshot.data ?? [];
-        if (polls.isEmpty) {
-          return Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Center(child: Text('Nenhuma data proposta.')),
-          );
-        }
-
-        // Ordenar por data
-        polls.sort((a, b) => a.date!.compareTo(b.date!));
-
-        // Determinar vencedor (mais votos)
-        int maxVotes = polls.fold(0, (max, p) => p.votes > max ? p.votes : max);
-
-        return Column(
-          children: polls.map((poll) {
-            final hasVoted = _pollService.hasUserVoted(poll);
-            final isWinner = poll.votes == maxVotes && maxVotes > 0;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildDateTile(
-                month: _getMonthAbbr(poll.date!),
-                day: poll.date!.day.toString(),
-                weekday: _getWeekday(poll.date!),
-                time:
-                    '${poll.date!.hour}:${poll.date!.minute.toString().padLeft(2, '0')}',
-                votes: poll.votes,
-                isWinner: isWinner,
-                isVotedByMe: hasVoted,
-                onVote: () => _pollService.vote(eventId, poll.id),
-              ),
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
-
-  // ========== PARTICIPANTES ==========
-  Widget _buildParticipantsList(List<String> participantUids) {
-    // Limitar a exibição aos primeiros 5 e depois um botão "Ver mais"
-    final displayUids = participantUids.take(5).toList();
-
-    return Wrap(
-      spacing: 24,
-      runSpacing: 24,
-      children: [
-        ...displayUids.map((uid) => _buildParticipantAvatar(uid)),
-        if (participantUids.length > 5)
-          Column(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(Icons.more_horiz, color: Colors.grey.shade400),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Ver +${participantUids.length - 5}',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-              ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  Widget _buildParticipantAvatar(String uid) {
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
-      builder: (context, snapshot) {
-        String name = 'Usuário';
-        String? photoUrl;
-        bool isOrganizer = false; // Simplificado
-
-        if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          name =
-              data['first_name'] ?? data['email']?.split('@')[0] ?? 'Usuário';
-          photoUrl = data['photo_url'];
-        }
-
-        return Column(
-          children: [
-            Container(
-              padding: isOrganizer ? const EdgeInsets.all(2) : EdgeInsets.zero,
-              decoration: isOrganizer
-                  ? const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFF8B80F9),
-                    )
-                  : null,
-              child: CircleAvatar(
-                radius: 28,
-                backgroundColor: Colors.white,
-                backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                    ? NetworkImage(photoUrl)
-                    : const NetworkImage(
-                        'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
-                      ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              name,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            if (isOrganizer)
-              const Padding(
-                padding: EdgeInsets.only(top: 2.0),
-                child: Text(
-                  'ORGANIZADOR',
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF8B80F9),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ========== TENDÊNCIA ==========
-  Widget _buildTrendCard(Event event) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF8B80F9), Color(0xFF7A6EE6)],
+  // ---------- SEÇÃO DE LOCAIS (usando venueOptions do evento) ----------
+  Widget _buildVenueOptionsSection(Event event) {
+    final venues = event.venueOptions ?? [];
+    if (venues.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
         ),
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF8B80F9).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+        child: const Center(child: Text('Nenhum local para votar ainda.')),
+      );
+    }
+    return Column(
+      children: venues.map((venue) {
+        final hasVoted = _pollService.hasUserVoted(venue.votes);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: _buildVoteCard(
+            title: venue.title,
+            subtitle: venue.venueName,
+            imageUrl: venue.imageUrl,
+            votes: venue.votes.length,
+            isVotedByMe: hasVoted,
+            onVote: () => _pollService
+                .voteVenue(event.id, venue.id)
+                .then((_) => setState(() {})),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.trending_up, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                'TENDÊNCIA DO GRUPO',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0,
-                ),
-              ),
-            ],
+        );
+      }).toList(),
+    );
+  }
+
+  // ---------- SEÇÃO DE DATAS (usando dateOptions do evento) ----------
+  Widget _buildDateOptionsSection(Event event) {
+    final dates = event.dateOptions ?? [];
+    if (dates.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Center(child: Text('Nenhuma data proposta.')),
+      );
+    }
+    // Ordenar por data de início
+    dates.sort((a, b) => a.startDate.compareTo(b.startDate));
+    final maxVotes =
+        dates.fold<int>(0, (max, d) => d.votes.length > max ? d.votes.length : max);
+
+    return Column(
+      children: dates.map((date) {
+        final hasVoted = _pollService.hasUserVoted(date.votes);
+        final isWinner = date.votes.length == maxVotes && maxVotes > 0;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildDateTile(
+            month: _getMonthAbbr(date.startDate),
+            day: date.startDate.day.toString(),
+            weekday: _getWeekday(date.startDate),
+            time:
+                '${date.startDate.hour}:${date.startDate.minute.toString().padLeft(2, '0')}',
+            votes: date.votes.length,
+            isWinner: isWinner,
+            isVotedByMe: hasVoted,
+            onVote: () => _pollService
+                .voteDate(event.id, date.id)
+                .then((_) => setState(() {})),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Em breve: ${event.title}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'As votações estão aquecidas! Convide mais amigos para decidir.',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 14,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 
@@ -517,6 +381,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 140,
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.image_not_supported, size: 40),
+                  ),
                 ),
               ),
               Positioned(
@@ -713,6 +582,565 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
+  // ========== PARTICIPANTES ==========
+  Widget _buildParticipantsList(List<String> participantUids) {
+    final displayUids = participantUids.take(5).toList();
+    return Wrap(
+      spacing: 24,
+      runSpacing: 24,
+      children: [
+        ...displayUids.map((uid) => _buildParticipantAvatar(uid)),
+        if (participantUids.length > 5)
+          Column(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(Icons.more_horiz, color: Colors.grey.shade400),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Ver +${participantUids.length - 5}',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildParticipantAvatar(String uid) {
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      builder: (context, snapshot) {
+        String name = 'Usuário';
+        String? photoUrl;
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          name =
+              data['first_name'] ?? data['email']?.split('@')[0] ?? 'Usuário';
+          photoUrl = data['photo_url'];
+        }
+        return Column(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: Colors.white,
+              backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                  ? NetworkImage(photoUrl)
+                  : const NetworkImage(
+                      'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
+                    ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ========== TENDÊNCIA ==========
+  Widget _buildTrendCard(Event event) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8B80F9), Color(0xFF7A6EE6)],
+        ),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8B80F9).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.trending_up, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'TENDÊNCIA DO GRUPO',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Em breve: ${event.title}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'As votações estão aquecidas! Convide mais amigos para decidir.',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  // ========== SEÇÃO DE TAREFAS (da primeira versão) ==========
+  Widget _buildTasksSection(String eventId) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Tarefas',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _showAddTaskDialog(eventId),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Nova'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF8B80F9),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<Task>>(
+          stream: _taskService.getTasks(eventId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Text('Erro: ${snapshot.error}');
+            }
+            final tasks = snapshot.data ?? [];
+            if (tasks.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: Text('Nenhuma tarefa criada ainda.'),
+                ),
+              );
+            }
+            return Column(
+              children: tasks
+                  .map((task) => _buildTaskTile(eventId, task))
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTaskTile(String eventId, Task task) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Checkbox(
+          value: task.status == 'done',
+          onChanged: (val) {
+            _taskService.updateTaskStatus(
+              eventId,
+              task.id,
+              val! ? 'done' : 'pending',
+            );
+          },
+          activeColor: const Color(0xFF8B80F9),
+        ),
+        title: Text(
+          task.title,
+          style: TextStyle(
+            decoration:
+                task.status == 'done' ? TextDecoration.lineThrough : null,
+            color: task.status == 'done' ? Colors.grey : Colors.black87,
+          ),
+        ),
+        subtitle: task.assignedToName != null
+            ? Text('Responsável: ${task.assignedToName}')
+            : const Text('Não atribuída'),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
+          onPressed: () => _taskService.deleteTask(eventId, task.id),
+        ),
+        onTap: () {
+          // Opcional: abrir edição da tarefa
+        },
+      ),
+    );
+  }
+
+  void _showAddTaskDialog(String eventId) {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    String? selectedUserId;
+    String? selectedUserName;
+    DateTime? dueDate;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Nova Tarefa',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Título',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Descrição (opcional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 12),
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _getEventParticipants(eventId),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox.shrink();
+                      final participants = snapshot.data!;
+                      return DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Responsável',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: selectedUserId,
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('Nenhum (tarefa compartilhada)'),
+                          ),
+                          ...participants.map(
+                            (p) => DropdownMenuItem<String>(
+                              value: p['uid'] as String,
+                              child: Text(p['name'] as String),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedUserId = value;
+                            if (value != null) {
+                              final selected = participants.firstWhere(
+                                (p) => p['uid'] == value,
+                              );
+                              selectedUserName = selected['name'] as String;
+                            } else {
+                              selectedUserName = null;
+                            }
+                          });
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          dueDate == null
+                              ? 'Sem data limite'
+                              : 'Prazo: ${dueDate!.day}/${dueDate!.month}/${dueDate!.year}',
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
+                          );
+                          if (date != null) {
+                            setState(() => dueDate = date);
+                          }
+                        },
+                        child: const Text('Selecionar data'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (titleController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('O título é obrigatório'),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.pop(context);
+                        try {
+                          await _taskService.createTask(
+                            eventId: eventId,
+                            title: titleController.text.trim(),
+                            description: descriptionController.text.trim(),
+                            assignedTo: selectedUserId,
+                            assignedToName: selectedUserName,
+                            dueDate: dueDate,
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erro: $e')),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF8B80F9),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Criar Tarefa'),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _getEventParticipants(
+    String eventId,
+  ) async {
+    final eventDoc = await FirebaseFirestore.instance
+        .collection('events')
+        .doc(eventId)
+        .get();
+    final participants = List<String>.from(
+      eventDoc.data()?['participants'] ?? [],
+    );
+    final List<Map<String, dynamic>> result = [];
+    for (var uid in participants) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        final name = '${data['first_name'] ?? ''} ${data['last_name'] ?? ''}'
+            .trim();
+        result.add({'uid': uid, 'name': name.isNotEmpty ? name : uid});
+      } else {
+        result.add({'uid': uid, 'name': uid});
+      }
+    }
+    return result;
+  }
+
+  // ========== MODAL DE CONVITE ==========
+  void _showInviteModal(Event event) async {
+    final inviteCode = await _eventService.getOrCreateInviteCode(event.id);
+    final inviteLink = 'vamonessa://invite?code=$inviteCode'; // deep link
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Convidar Participantes',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Compartilhe o código ou link abaixo para que outras pessoas possam entrar no evento.',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 24),
+            // Código de convite
+            const Text('Código de convite:',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      inviteCode,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 4,
+                        color: Color(0xFF8B80F9),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: inviteCode));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Código copiado!')),
+                    );
+                  },
+                  icon: const Icon(Icons.copy, color: Color(0xFF8B80F9)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // Link de convite
+            const Text('Link de convite:',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      inviteLink,
+                      style: TextStyle(
+                          fontSize: 14, color: Colors.grey.shade800),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: inviteLink));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Link copiado!')),
+                    );
+                  },
+                  icon: const Icon(Icons.copy, color: Color(0xFF8B80F9)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // Botão de fechar
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B80F9),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('OK'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ========== HELPERS ==========
   String _calculateDaysLeft(DateTime endDate) {
     final now = DateTime.now();
@@ -752,11 +1180,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     return weekdays[date.weekday - 1];
   }
 
-  // ========== BOTTOM NAVIGATION ==========
   Widget _buildSectionHeader(
     String title, {
     String? trailingText,
     String? trailingAction,
+    VoidCallback? onTrailingActionTap,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -781,9 +1209,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           ),
         if (trailingAction != null)
           GestureDetector(
-            onTap: () {
-              // TODO: Implementar convite
-            },
+            onTap: onTrailingActionTap,
             child: Text(
               trailingAction,
               style: const TextStyle(
@@ -797,6 +1223,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
+  // ========== BOTTOM NAVIGATION ==========
   Widget _buildCustomBottomNav() {
     return Container(
       padding: const EdgeInsets.only(top: 16, bottom: 32, left: 24, right: 24),

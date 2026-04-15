@@ -46,6 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '856901465837',
     projectId: 'vamonessa-bdcdc',
     authDomain: 'vamonessa-bdcdc.firebaseapp.com',
+    databaseURL: 'https://vamonessa-bdcdc-default-rtdb.firebaseio.com',
     storageBucket: 'vamonessa-bdcdc.firebasestorage.app',
     measurementId: 'G-1RMNDEK70V',
   );
@@ -55,6 +56,7 @@ class DefaultFirebaseOptions {
     appId: '1:856901465837:android:e376309b8577facb713ee4',
     messagingSenderId: '856901465837',
     projectId: 'vamonessa-bdcdc',
+    databaseURL: 'https://vamonessa-bdcdc-default-rtdb.firebaseio.com',
     storageBucket: 'vamonessa-bdcdc.firebasestorage.app',
   );
 
@@ -63,6 +65,7 @@ class DefaultFirebaseOptions {
     appId: '1:856901465837:ios:3e2861aed22dbae4713ee4',
     messagingSenderId: '856901465837',
     projectId: 'vamonessa-bdcdc',
+    databaseURL: 'https://vamonessa-bdcdc-default-rtdb.firebaseio.com',
     storageBucket: 'vamonessa-bdcdc.firebasestorage.app',
     iosBundleId: 'com.example.vamonessa',
   );
@@ -72,6 +75,7 @@ class DefaultFirebaseOptions {
     appId: '1:856901465837:ios:3e2861aed22dbae4713ee4',
     messagingSenderId: '856901465837',
     projectId: 'vamonessa-bdcdc',
+    databaseURL: 'https://vamonessa-bdcdc-default-rtdb.firebaseio.com',
     storageBucket: 'vamonessa-bdcdc.firebasestorage.app',
     iosBundleId: 'com.example.vamonessa',
   );
@@ -82,7 +86,9 @@ class DefaultFirebaseOptions {
     messagingSenderId: '856901465837',
     projectId: 'vamonessa-bdcdc',
     authDomain: 'vamonessa-bdcdc.firebaseapp.com',
+    databaseURL: 'https://vamonessa-bdcdc-default-rtdb.firebaseio.com',
     storageBucket: 'vamonessa-bdcdc.firebasestorage.app',
     measurementId: 'G-88KK0B96HW',
   );
+
 }

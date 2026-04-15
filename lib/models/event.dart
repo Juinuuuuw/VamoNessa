@@ -14,6 +14,7 @@ class Event {
   final DateTime? createdAt;
   final List<DateOption>? dateOptions;
   final List<VenueOptionModel>? venueOptions;
+  final String? inviteCode; // NOVO
 
   Event({
     required this.id,
@@ -28,6 +29,7 @@ class Event {
     this.createdAt,
     this.dateOptions,
     this.venueOptions,
+    this.inviteCode,
   });
 
   factory Event.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -119,6 +121,7 @@ class Event {
           : null,
       dateOptions: parsedDateOptions,
       venueOptions: parsedVenueOptions,
+      inviteCode: data['inviteCode']?.toString(),
     );
   }
 
@@ -135,6 +138,7 @@ class Event {
       'createdAt': FieldValue.serverTimestamp(),
       'dateOptions': dateOptions?.map((d) => d.toMap()).toList(),
       'venueOptions': venueOptions?.map((v) => v.toMap()).toList(),
+      'inviteCode': inviteCode,
     };
   }
 }

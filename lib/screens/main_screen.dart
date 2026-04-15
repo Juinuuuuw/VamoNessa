@@ -192,16 +192,7 @@ class _MainScreenState extends State<MainScreen> {
                         label: 'Invite',
                         backgroundColor: const Color(0xFFFFF0E3),
                         iconColor: const Color(0xFFF9A866),
-                        onTap: () {
-                          // TODO: implementar convite
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Funcionalidade em desenvolvimento',
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: () => Navigator.pushNamed(context, '/join'),
                       ),
                       const SizedBox(width: 12),
                       _ActionButton(
@@ -479,7 +470,16 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildNavItem(IconData icon, String label, int index) {
     bool isActive = _currentNavIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _currentNavIndex = index),
+      onTap: () {
+        setState(() => _currentNavIndex = index);
+        // Navegação para as telas correspondentes
+        if (index == 0) {
+          // Já está na home, opcional
+        } else if (index == 3) {
+          Navigator.pushNamed(context, '/profile');
+        }
+        // Se houver outras telas (ex: SOCIAL), adicione aqui
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
