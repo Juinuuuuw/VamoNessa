@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vamonessa/services/participant_service.dart';
 import '../models/event.dart';
 import '../services/event_service.dart';
 import '../services/poll_service.dart';
@@ -20,6 +21,7 @@ class EventDetailsScreen extends StatefulWidget {
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
   final EventService _eventService = EventService();
   final PollService _pollService = PollService();
+  final ParticipantService _participantService = ParticipantService();
   int _currentNavIndex = 0;
   bool _isConfirming = false;
 
@@ -137,7 +139,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       padding: const EdgeInsets.only(
                         left: 24.0,
                         right: 24.0,
-                        bottom: 100.0,
+                        bottom: 140.0, // era 100.0
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,77 +674,78 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
   // ========== PARTICIPANTES ==========
   Widget _buildParticipantsList(List<String> participantUids) {
-    final displayUids = participantUids.take(5).toList();
-    return Wrap(
-      spacing: 24,
-      runSpacing: 24,
-      children: [
-        ...displayUids.map((uid) => _buildParticipantAvatar(uid)),
-        if (participantUids.length > 5)
-          Column(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(Icons.more_horiz, color: Colors.grey.shade400),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Ver +${participantUids.length - 5}',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-              ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  Widget _buildParticipantAvatar(String uid) {
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _participantService.getParticipants(widget.eventId),
       builder: (context, snapshot) {
-        String name = 'Usuário';
-        String? photoUrl;
-        if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          name =
-              data['first_name'] ?? data['email']?.split('@')[0] ?? 'Usuário';
-          photoUrl = data['photo_url'];
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
         }
-        return Column(
+        if (snapshot.hasError) {
+          return Text('Erro: ${snapshot.error}');
+        }
+        final participants = snapshot.data ?? [];
+        final displayParticipants = participants.take(5).toList();
+
+        return Wrap(
+          spacing: 24,
+          runSpacing: 24,
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: Colors.white,
-              backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                  ? NetworkImage(photoUrl)
-                  : const NetworkImage(
-                      'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
+            ...displayParticipants.map((p) => _buildParticipantAvatar(p)),
+            if (participants.length > 5)
+              Column(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              name,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                    child: Icon(Icons.more_horiz, color: Colors.grey.shade400),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Ver +${participants.length - 5}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                ],
               ),
-            ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildParticipantAvatar(Map<String, dynamic> participant) {
+    final uid = participant['uid'] as String;
+    final name = participant['name'] as String? ?? 'Usuário';
+
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: Colors.white,
+          backgroundImage: NetworkImage(
+            'https://ui-avatars.com/api/?name=$name&background=8B80F9&color=fff&size=56',
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          name.length > 10 ? '${name.substring(0, 10)}...' : name,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+      ],
     );
   }
 

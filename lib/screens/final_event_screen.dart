@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vamonessa/services/participant_service.dart';
 import '../models/event.dart';
 import '../models/task.dart';
 import '../services/event_service.dart';
@@ -19,6 +20,7 @@ class FinalEventScreen extends StatefulWidget {
 class _FinalEventScreenState extends State<FinalEventScreen> {
   final EventService _eventService = EventService();
   final TaskService _taskService = TaskService();
+  final ParticipantService _participantService = ParticipantService();
   late Future<Event?> _eventFuture;
   int _currentNavIndex = 0;
 
@@ -687,7 +689,7 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
                   const SizedBox(height: 12),
                   // ----- DROPDOWN DE RESPONSÁVEL (COM CARREGAMENTO VISÍVEL) -----
                   FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _getEventParticipants(),
+                    future: _participantService.getParticipants(widget.eventId),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Padding(
@@ -893,25 +895,40 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
   }
 
   Widget _buildParticipantCircle(String uid) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: const Color(0xFF8B80F9),
-            child: CircleAvatar(
-              radius: 28,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=$uid'),
-            ),
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      builder: (context, snapshot) {
+        String name = 'Usuário';
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          name = data['first_name'] ?? 'Usuário';
+        }
+        return Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: const Color(0xFF8B80F9),
+                child: CircleAvatar(
+                  radius: 28,
+                  backgroundImage: NetworkImage(
+                    'https://ui-avatars.com/api/?name=$name&background=8B80F9&color=fff&size=56',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                name.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'USER',
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
