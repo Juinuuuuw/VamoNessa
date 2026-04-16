@@ -1,11 +1,11 @@
 // lib/screens/final_event_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/event.dart';
+import '../models/task.dart';
 import '../services/event_service.dart';
 import '../services/task_service.dart';
-import '../models/task.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FinalEventScreen extends StatefulWidget {
   final String eventId;
@@ -465,22 +465,32 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
   }
 
   Widget _buildPlanningHeader(String eventId) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Planejamento',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          '80% completo',
-          style: TextStyle(
-            color: Color(0xFF8B80F9),
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-        ),
-      ],
+    return StreamBuilder<List<Task>>(
+      stream: _taskService.getTasks(eventId),
+      builder: (context, snapshot) {
+        final tasks = snapshot.data ?? [];
+        final done = tasks.where((t) => t.status == 'done').length;
+        final percent = tasks.isEmpty
+            ? 0
+            : ((done / tasks.length) * 100).round();
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Planejamento',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              '$percent% completo',
+              style: const TextStyle(
+                color: Color(0xFF8B80F9),
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -488,6 +498,12 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
     return StreamBuilder<List<Task>>(
       stream: _taskService.getTasks(eventId),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Text('Erro: ${snapshot.error}');
+        }
         final tasks = snapshot.data ?? [];
         return Column(
           children: [
@@ -518,6 +534,7 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
       ),
       child: Row(
         children: [
+          // Checkbox de conclusão
           GestureDetector(
             onTap: () {
               _taskService.updateTaskStatus(
@@ -532,6 +549,7 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
             ),
           ),
           const SizedBox(width: 12),
+          // Título e responsável
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,16 +562,46 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
                     color: isDone ? Colors.grey : Colors.black87,
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  'ATRIBUÍDO A: ${task.assignedToName?.toUpperCase() ?? "TODOS"}',
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                  'Responsável: ${task.assignedToName ?? "Todos"}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ],
             ),
           ),
+          // Botão de excluir
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            onPressed: () => _confirmDeleteTask(task),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDeleteTask(Task task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir tarefa'),
+        content: Text('Deseja realmente excluir a tarefa "${task.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _taskService.deleteTask(widget.eventId, task.id);
+    }
   }
 
   Widget _buildAddActivityButton() {
@@ -637,11 +685,45 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
                     maxLines: 2,
                   ),
                   const SizedBox(height: 12),
+                  // ----- DROPDOWN DE RESPONSÁVEL (COM CARREGAMENTO VISÍVEL) -----
                   FutureBuilder<List<Map<String, dynamic>>>(
                     future: _getEventParticipants(),
                     builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox.shrink();
-                      final participants = snapshot.data!;
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Carregando participantes...'),
+                            ],
+                          ),
+                        );
+                      }
+                      if (snapshot.hasError) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Text(
+                            'Erro ao carregar participantes',
+                            style: TextStyle(color: Colors.red.shade700),
+                          ),
+                        );
+                      }
+                      final participants = snapshot.data ?? [];
+                      if (participants.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('Nenhum participante disponível.'),
+                        );
+                      }
+                      // Dropdown exibido quando há participantes
                       return DropdownButtonFormField<String>(
                         decoration: const InputDecoration(
                           labelText: 'Responsável',
@@ -677,6 +759,7 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
+                  // Data limite (mantido como está)
                   Row(
                     children: [
                       Expanded(
@@ -751,6 +834,7 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _getEventParticipants() async {
+    print('=== Buscando participantes do evento ${widget.eventId} ===');
     final eventDoc = await FirebaseFirestore.instance
         .collection('events')
         .doc(widget.eventId)
@@ -758,21 +842,31 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
     final participants = List<String>.from(
       eventDoc.data()?['participants'] ?? [],
     );
+    print('Participantes UIDs: $participants');
+
     final List<Map<String, dynamic>> result = [];
     for (var uid in participants) {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-      if (userDoc.exists) {
-        final data = userDoc.data()!;
-        final name = '${data['first_name'] ?? ''} ${data['last_name'] ?? ''}'
-            .trim();
-        result.add({'uid': uid, 'name': name.isNotEmpty ? name : uid});
-      } else {
-        result.add({'uid': uid, 'name': uid});
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
+        if (userDoc.exists) {
+          final data = userDoc.data()!;
+          final name = '${data['first_name'] ?? ''} ${data['last_name'] ?? ''}'
+              .trim();
+          print('Usuário $uid: nome="$name"');
+          result.add({'uid': uid, 'name': name.isNotEmpty ? name : uid});
+        } else {
+          print('Usuário $uid não encontrado na coleção users');
+          result.add({'uid': uid, 'name': uid}); // fallback para UID
+        }
+      } catch (e) {
+        print('Erro ao buscar usuário $uid: $e');
+        result.add({'uid': uid, 'name': uid}); // fallback para UID
       }
     }
+    print('Resultado final: $result');
     return result;
   }
 
