@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/user.dart';
 
 class UserService {
@@ -44,15 +46,21 @@ class UserService {
   }
 
   /// Faz upload de uma nova foto de perfil e retorna a URL
-  Future<String> uploadProfilePicture(File imageFile) async {
+  Future<String> uploadProfilePicture(XFile imageFile) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Usuário não autenticado');
+
+    // Lê os bytes da imagem (compatível com todas as plataformas)
+    final Uint8List imageBytes = await imageFile.readAsBytes();
 
     final fileName =
         'profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final ref = _storage.ref().child('profile_pictures/$fileName');
-    await ref.putFile(imageFile);
-    final downloadUrl = await ref.getDownloadURL();
+
+    // Upload usando os bytes
+    final uploadTask = ref.putData(imageBytes);
+    final snapshot = await uploadTask.whenComplete(() => null);
+    final downloadUrl = await snapshot.ref.getDownloadURL();
 
     await _firestore.collection('users').doc(user.uid).update({
       'photo_url': downloadUrl,

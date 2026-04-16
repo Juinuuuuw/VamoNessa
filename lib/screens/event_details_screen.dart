@@ -4,10 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/event.dart';
-import '../models/task.dart';
 import '../services/event_service.dart';
 import '../services/poll_service.dart';
-import '../services/task_service.dart';
 import 'final_event_screen.dart';
 
 class EventDetailsScreen extends StatefulWidget {
@@ -22,7 +20,6 @@ class EventDetailsScreen extends StatefulWidget {
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
   final EventService _eventService = EventService();
   final PollService _pollService = PollService();
-  final TaskService _taskService = TaskService();
   int _currentNavIndex = 0;
   bool _isConfirming = false;
 
@@ -47,7 +44,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF34A853)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF34A853),
+            ),
             child: const Text('Confirmar'),
           ),
         ],
@@ -69,9 +68,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao confirmar evento: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao confirmar evento: $e')));
       }
     } finally {
       if (mounted) setState(() => _isConfirming = false);
@@ -167,7 +166,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           const SizedBox(height: 24),
 
                           // Botão Confirmar (somente criador e se estiver em votação)
-                          if (_isEventCreator(event) && event.status == 'voting')
+                          if (_isEventCreator(event) &&
+                              event.status == 'voting')
                             _buildConfirmButton(event),
 
                           const SizedBox(height: 32),
@@ -180,10 +180,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           ),
                           const SizedBox(height: 16),
                           _buildParticipantsList(event.participants),
-
-                          // Seção de Tarefas
-                          const SizedBox(height: 32),
-                          _buildTasksSection(event.id),
                         ],
                       ),
                     ),
@@ -207,7 +203,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             ? const SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : const Icon(Icons.check_circle_outline, size: 20),
         label: Text(
@@ -218,7 +217,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           backgroundColor: const Color(0xFF34A853),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
         ),
       ),
     );
@@ -805,307 +806,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         ],
       ),
     );
-  }
-
-  // ========== SEÇÃO DE TAREFAS ==========
-  Widget _buildTasksSection(String eventId) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Tarefas',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            TextButton.icon(
-              onPressed: () => _showAddTaskDialog(eventId),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Nova'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF8B80F9),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        StreamBuilder<List<Task>>(
-          stream: _taskService.getTasks(eventId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Text('Erro: ${snapshot.error}');
-            }
-            final tasks = snapshot.data ?? [];
-            if (tasks.isEmpty) {
-              return Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Center(
-                  child: Text('Nenhuma tarefa criada ainda.'),
-                ),
-              );
-            }
-            return Column(
-              children: tasks
-                  .map((task) => _buildTaskTile(eventId, task))
-                  .toList(),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTaskTile(String eventId, Task task) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        leading: Checkbox(
-          value: task.status == 'done',
-          onChanged: (val) {
-            _taskService.updateTaskStatus(
-              eventId,
-              task.id,
-              val! ? 'done' : 'pending',
-            );
-          },
-          activeColor: const Color(0xFF8B80F9),
-        ),
-        title: Text(
-          task.title,
-          style: TextStyle(
-            decoration: task.status == 'done'
-                ? TextDecoration.lineThrough
-                : null,
-            color: task.status == 'done' ? Colors.grey : Colors.black87,
-          ),
-        ),
-        subtitle: task.assignedToName != null
-            ? Text('Responsável: ${task.assignedToName}')
-            : const Text('Não atribuída'),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete, color: Colors.grey, size: 20),
-          onPressed: () => _taskService.deleteTask(eventId, task.id),
-        ),
-        onTap: () {
-          // Opcional: abrir edição da tarefa
-        },
-      ),
-    );
-  }
-
-  void _showAddTaskDialog(String eventId) {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-    String? selectedUserId;
-    String? selectedUserName;
-    DateTime? dueDate;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 24,
-                right: 24,
-                top: 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Nova Tarefa',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Título',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Descrição (opcional)',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 12),
-                  FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _getEventParticipants(eventId),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox.shrink();
-                      final participants = snapshot.data!;
-                      return DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Responsável',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: selectedUserId,
-                        items: [
-                          const DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('Nenhum (tarefa compartilhada)'),
-                          ),
-                          ...participants.map(
-                            (p) => DropdownMenuItem<String>(
-                              value: p['uid'] as String,
-                              child: Text(p['name'] as String),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            selectedUserId = value;
-                            if (value != null) {
-                              final selected = participants.firstWhere(
-                                (p) => p['uid'] == value,
-                              );
-                              selectedUserName = selected['name'] as String;
-                            } else {
-                              selectedUserName = null;
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          dueDate == null
-                              ? 'Sem data limite'
-                              : 'Prazo: ${dueDate!.day}/${dueDate!.month}/${dueDate!.year}',
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(
-                              const Duration(days: 365),
-                            ),
-                          );
-                          if (date != null) {
-                            setState(() => dueDate = date);
-                          }
-                        },
-                        child: const Text('Selecionar data'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        if (titleController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('O título é obrigatório'),
-                            ),
-                          );
-                          return;
-                        }
-                        Navigator.pop(context);
-                        try {
-                          await _taskService.createTask(
-                            eventId: eventId,
-                            title: titleController.text.trim(),
-                            description: descriptionController.text.trim(),
-                            assignedTo: selectedUserId,
-                            assignedToName: selectedUserName,
-                            dueDate: dueDate,
-                          );
-                        } catch (e) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text('Erro: $e')));
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B80F9),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Criar Tarefa'),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> _getEventParticipants(
-    String eventId,
-  ) async {
-    final eventDoc = await FirebaseFirestore.instance
-        .collection('events')
-        .doc(eventId)
-        .get();
-    final participants = List<String>.from(
-      eventDoc.data()?['participants'] ?? [],
-    );
-    final List<Map<String, dynamic>> result = [];
-    for (var uid in participants) {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-      if (userDoc.exists) {
-        final data = userDoc.data()!;
-        final name = '${data['first_name'] ?? ''} ${data['last_name'] ?? ''}'
-            .trim();
-        result.add({'uid': uid, 'name': name.isNotEmpty ? name : uid});
-      } else {
-        result.add({'uid': uid, 'name': uid});
-      }
-    }
-    return result;
   }
 
   // ========== MODAL DE CONVITE ==========

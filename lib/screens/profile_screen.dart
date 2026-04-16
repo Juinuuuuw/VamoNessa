@@ -56,7 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isUploading = true);
     try {
-      final newUrl = await _userService.uploadProfilePicture(File(image.path));
+      final newUrl = await _userService.uploadProfilePicture(image);
       setState(() {
         _user = UserModel(
           uid: _user!.uid,
@@ -169,11 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     // Navega para a tela de login e remove todas as rotas anteriores
     if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/login',
-        (route) => false,
-      );
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
   }
 
