@@ -107,25 +107,34 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('Usuário não autenticado');
 
-      final dateOptionsForFirestore = dateOptions.map((d) => DateOption(
-            id: '',
-            startDate: d.startDate,
-            endDate: d.endDate,
-          )).toList();
+      final dateOptionsForFirestore = dateOptions
+          .map(
+            (d) =>
+                DateOption(id: '', startDate: d.startDate, endDate: d.endDate),
+          )
+          .toList();
 
-      final venueOptionsForFirestore = venueOptions.map((v) => VenueOptionModel(
-            id: '',
-            title: v.title,
-            venueName: v.venueName,
-            venueLink: v.venueLink,
-            price: v.price,
-            priceDetail: v.priceDetail,
-            imageUrl: v.imageUrl,
-            activities: v.activities.map((a) => Activity(name: a.name, time: a.time)).toList(),
-            scheduleName: v.scheduleName,
-            scheduleActivities: v.scheduleActivities.map((a) => Activity(name: a.name, time: a.time)).toList(),
-            total: v.total,
-          )).toList();
+      final venueOptionsForFirestore = venueOptions
+          .map(
+            (v) => VenueOptionModel(
+              id: '',
+              title: v.title,
+              venueName: v.venueName,
+              venueLink: v.venueLink,
+              price: v.price,
+              priceDetail: v.priceDetail,
+              imageUrl: v.imageUrl,
+              activities: v.activities
+                  .map((a) => Activity(name: a.name, time: a.time))
+                  .toList(),
+              scheduleName: v.scheduleName,
+              scheduleActivities: v.scheduleActivities
+                  .map((a) => Activity(name: a.name, time: a.time))
+                  .toList(),
+              total: v.total,
+            ),
+          )
+          .toList();
 
       final eventId = await _eventService.createAdvancedEvent(
         title: eventNameController.text,
@@ -140,13 +149,17 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Evento criado com sucesso!')),
         );
-        Navigator.pushReplacementNamed(context, '/inside_event', arguments: eventId);
+        Navigator.pushReplacementNamed(
+          context,
+          '/inside_event',
+          arguments: eventId,
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao criar evento: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao criar evento: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -163,11 +176,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF7DFCA),
-              Color(0xFFE8E2FF),
-              Color(0xFFD4C8FF),
-            ],
+            colors: [Color(0xFFF7DFCA), Color(0xFFE8E2FF), Color(0xFFD4C8FF)],
           ),
         ),
         child: SafeArea(
@@ -177,21 +186,37 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             children: [
               // Seta de Retorno
               Padding(
-                padding: const EdgeInsets.only(left: 8.0, top: 8.0, right: 24.0),
+                padding: const EdgeInsets.only(
+                  left: 8.0,
+                  top: 8.0,
+                  right: 24.0,
+                ),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/main'),
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.black87,
+                  ),
+                  onPressed: () =>
+                      Navigator.pushReplacementNamed(context, '/main'),
                 ),
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 8.0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'Criar Novo Evento',
-                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2D2D2D), letterSpacing: -0.5),
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF2D2D2D),
+                          letterSpacing: -0.5,
+                        ),
                       ),
                       const SizedBox(height: 24),
                       _buildEventImageSection(),
@@ -202,10 +227,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                       const SizedBox(height: 32),
                       _buildProposedOptionsHeader(),
                       const SizedBox(height: 24),
-                      ...venueOptions.map((option) => Padding(
-                            padding: const EdgeInsets.only(bottom: 20),
-                            child: _buildOptionCard(option),
-                          )),
+                      ...venueOptions.map(
+                        (option) => Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: _buildOptionCard(option),
+                        ),
+                      ),
                       _buildAddNewOptionButton(),
                       const SizedBox(height: 32),
                       _buildLaunchEventButton(),
@@ -233,7 +260,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           color: Colors.white.withOpacity(0.6),
           borderRadius: BorderRadius.circular(24),
           image: eventImageUrl != null
-              ? DecorationImage(image: NetworkImage(eventImageUrl!), fit: BoxFit.cover)
+              ? DecorationImage(
+                  image: NetworkImage(eventImageUrl!),
+                  fit: BoxFit.cover,
+                )
               : null,
           border: Border.all(color: Colors.white, width: 2),
         ),
@@ -241,11 +271,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_photo_alternate_rounded, size: 32, color: const Color(0xFF8B80F9).withOpacity(0.7)),
+                  Icon(
+                    Icons.add_photo_alternate_rounded,
+                    size: 32,
+                    color: const Color(0xFF8B80F9).withOpacity(0.7),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Capa do Evento',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               )
@@ -262,7 +300,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                           color: Colors.black.withOpacity(0.6),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close, color: Colors.white, size: 16),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -286,17 +328,27 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       ),
       child: TextField(
         controller: eventNameController,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFF2D2D2D)),
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 18,
+          color: Color(0xFF2D2D2D),
+        ),
         decoration: InputDecoration(
           hintText: 'Nome do evento *',
-          hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.w600),
+          hintStyle: TextStyle(
+            color: Colors.grey.shade400,
+            fontWeight: FontWeight.w600,
+          ),
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(24),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 20,
+          ),
         ),
       ),
     );
@@ -311,12 +363,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           children: [
             const Text(
               'Opções de Data',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2D2D2D)),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF2D2D2D),
+              ),
             ),
             GestureDetector(
               onTap: _showAddDateModal,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF8B80F9).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -327,7 +386,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     SizedBox(width: 4),
                     Text(
                       'Adicionar',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF8B80F9), fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF8B80F9),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ],
                 ),
@@ -346,7 +409,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             child: const Center(
               child: Text(
                 'Nenhuma data adicionada. Toque em "Adicionar".',
-                style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           )
@@ -364,7 +430,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -378,20 +448,31 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   color: const Color(0xFFF8F7FF),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.date_range_rounded, color: Color(0xFF8B80F9)),
+                child: const Icon(
+                  Icons.date_range_rounded,
+                  color: Color(0xFF8B80F9),
+                ),
               ),
               const SizedBox(width: 16),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${dateOption.startDate.day}/${dateOption.startDate.month}/${dateOption.startDate.year} - ${dateOption.endDate.day}/${dateOption.endDate.month}/${dateOption.endDate.year}',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF2D2D2D)),
+                    '${dateOption.startDate.day}/${dateOption.startDate.month}/${dateOption.startDate.year} ${dateOption.startDate.hour.toString().padLeft(2, '0')}:${dateOption.startDate.minute.toString().padLeft(2, '0')} - ${dateOption.endDate.day}/${dateOption.endDate.month}/${dateOption.endDate.year} ${dateOption.endDate.hour.toString().padLeft(2, '0')}:${dateOption.endDate.minute.toString().padLeft(2, '0')}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF2D2D2D),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _getDateRangeDuration(dateOption),
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -407,7 +488,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     color: Colors.grey.shade100,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.edit_rounded, size: 16, color: Colors.grey),
+                  child: const Icon(
+                    Icons.edit_rounded,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -421,7 +506,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     color: Colors.red.shade50,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red.shade400),
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    size: 16,
+                    color: Colors.red.shade400,
+                  ),
                 ),
               ),
             ],
@@ -432,7 +521,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   }
 
   String _getDateRangeDuration(DateRangeOption dateOption) {
-    final difference = dateOption.endDate.difference(dateOption.startDate).inDays;
+    final difference = dateOption.endDate
+        .difference(dateOption.startDate)
+        .inDays;
     return difference == 0 ? '1 dia' : '$difference dias';
   }
 
@@ -459,26 +550,67 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 child: Container(
                   width: 40,
                   height: 5,
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
-              const Text('Adicionar Período', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF2D2D2D))),
+              const Text(
+                'Adicionar Período',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF2D2D2D),
+                ),
+              ),
               const SizedBox(height: 24),
-              const Text('Data de Início', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
+
+              // DATA DE INÍCIO (com hora)
+              const Text(
+                'Data e Hora de Início',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
+                  // Seleciona data
                   final date = await showDatePicker(
                     context: context,
                     initialDate: startDate ?? DateTime.now(),
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                   );
-                  if (date != null) setState(() => startDate = date);
+                  if (date != null) {
+                    // Seleciona hora
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(
+                        startDate ?? DateTime.now(),
+                      ),
+                    );
+                    if (time != null) {
+                      setState(() {
+                        startDate = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time.hour,
+                          time.minute,
+                        );
+                      });
+                    }
+                  }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8F7FF),
                     borderRadius: BorderRadius.circular(20),
@@ -488,17 +620,34 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     children: [
                       Text(
                         startDate != null
-                            ? '${startDate!.day.toString().padLeft(2,'0')}/${startDate!.month.toString().padLeft(2,'0')}/${startDate!.year}'
-                            : 'Selecione a data de início',
-                        style: TextStyle(color: startDate != null ? Colors.black87 : Colors.grey.shade500, fontWeight: FontWeight.w600),
+                            ? '${startDate!.day.toString().padLeft(2, '0')}/${startDate!.month.toString().padLeft(2, '0')}/${startDate!.year} ${startDate!.hour.toString().padLeft(2, '0')}:${startDate!.minute.toString().padLeft(2, '0')}'
+                            : 'Selecione data e hora de início',
+                        style: TextStyle(
+                          color: startDate != null
+                              ? Colors.black87
+                              : Colors.grey.shade500,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      const Icon(Icons.calendar_today_rounded, color: Color(0xFF8B80F9), size: 18),
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        color: Color(0xFF8B80F9),
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('Data de Fim', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
+
+              // DATA DE FIM (com hora)
+              const Text(
+                'Data e Hora de Fim',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
@@ -506,12 +655,35 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     context: context,
                     initialDate: endDate ?? (startDate ?? DateTime.now()),
                     firstDate: startDate ?? DateTime.now(),
-                    lastDate: (startDate ?? DateTime.now()).add(const Duration(days: 365)),
+                    lastDate: (startDate ?? DateTime.now()).add(
+                      const Duration(days: 365),
+                    ),
                   );
-                  if (date != null) setState(() => endDate = date);
+                  if (date != null) {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(
+                        endDate ?? DateTime.now(),
+                      ),
+                    );
+                    if (time != null) {
+                      setState(() {
+                        endDate = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time.hour,
+                          time.minute,
+                        );
+                      });
+                    }
+                  }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8F7FF),
                     borderRadius: BorderRadius.circular(20),
@@ -521,11 +693,20 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     children: [
                       Text(
                         endDate != null
-                            ? '${endDate!.day.toString().padLeft(2,'0')}/${endDate!.month.toString().padLeft(2,'0')}/${endDate!.year}'
-                            : 'Selecione a data de fim',
-                        style: TextStyle(color: endDate != null ? Colors.black87 : Colors.grey.shade500, fontWeight: FontWeight.w600),
+                            ? '${endDate!.day.toString().padLeft(2, '0')}/${endDate!.month.toString().padLeft(2, '0')}/${endDate!.year} ${endDate!.hour.toString().padLeft(2, '0')}:${endDate!.minute.toString().padLeft(2, '0')}'
+                            : 'Selecione data e hora de fim',
+                        style: TextStyle(
+                          color: endDate != null
+                              ? Colors.black87
+                              : Colors.grey.shade500,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      const Icon(Icons.calendar_today_rounded, color: Color(0xFF8B80F9), size: 18),
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        color: Color(0xFF8B80F9),
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
@@ -536,13 +717,29 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     if (startDate != null && endDate != null) {
-                      if (endDate!.isAfter(startDate!) || endDate!.isAtSameMomentAs(startDate!)) {
-                        Navigator.pop(context, DateRangeOption(startDate: startDate!, endDate: endDate!));
+                      if (endDate!.isAfter(startDate!)) {
+                        Navigator.pop(
+                          context,
+                          DateRangeOption(
+                            startDate: startDate!,
+                            endDate: endDate!,
+                          ),
+                        );
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('A data de fim deve ser após a data de início')),
+                          const SnackBar(
+                            content: Text(
+                              'A data de fim deve ser posterior à data de início',
+                            ),
+                          ),
                         );
                       }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Selecione ambas as datas'),
+                        ),
+                      );
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -550,9 +747,18 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
-                  child: const Text('ADICIONAR PERÍODO', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 1.0)),
+                  child: const Text(
+                    'ADICIONAR PERÍODO',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -590,13 +796,31 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 child: Container(
                   width: 40,
                   height: 5,
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
-              const Text('Editar Período', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF2D2D2D))),
+              const Text(
+                'Editar Período',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF2D2D2D),
+                ),
+              ),
               const SizedBox(height: 24),
-              const Text('Data de Início', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
+
+              // DATA DE INÍCIO
+              const Text(
+                'Data e Hora de Início',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
@@ -606,10 +830,29 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                   );
-                  if (date != null) setState(() => startDate = date);
+                  if (date != null) {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(startDate),
+                    );
+                    if (time != null) {
+                      setState(() {
+                        startDate = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time.hour,
+                          time.minute,
+                        );
+                      });
+                    }
+                  }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8F7FF),
                     borderRadius: BorderRadius.circular(20),
@@ -618,16 +861,31 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${startDate.day.toString().padLeft(2,'0')}/${startDate.month.toString().padLeft(2,'0')}/${startDate.year}',
-                        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+                        '${startDate.day.toString().padLeft(2, '0')}/${startDate.month.toString().padLeft(2, '0')}/${startDate.year} ${startDate.hour.toString().padLeft(2, '0')}:${startDate.minute.toString().padLeft(2, '0')}',
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      const Icon(Icons.calendar_today_rounded, color: Color(0xFF8B80F9), size: 18),
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        color: Color(0xFF8B80F9),
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('Data de Fim', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
+
+              // DATA DE FIM
+              const Text(
+                'Data e Hora de Fim',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () async {
@@ -637,10 +895,29 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     firstDate: startDate,
                     lastDate: startDate.add(const Duration(days: 365)),
                   );
-                  if (date != null) setState(() => endDate = date);
+                  if (date != null) {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(endDate),
+                    );
+                    if (time != null) {
+                      setState(() {
+                        endDate = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          time.hour,
+                          time.minute,
+                        );
+                      });
+                    }
+                  }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8F7FF),
                     borderRadius: BorderRadius.circular(20),
@@ -649,10 +926,17 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${endDate.day.toString().padLeft(2,'0')}/${endDate.month.toString().padLeft(2,'0')}/${endDate.year}',
-                        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+                        '${endDate.day.toString().padLeft(2, '0')}/${endDate.month.toString().padLeft(2, '0')}/${endDate.year} ${endDate.hour.toString().padLeft(2, '0')}:${endDate.minute.toString().padLeft(2, '0')}',
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      const Icon(Icons.calendar_today_rounded, color: Color(0xFF8B80F9), size: 18),
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        color: Color(0xFF8B80F9),
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
@@ -662,11 +946,18 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    if (endDate.isAfter(startDate) || endDate.isAtSameMomentAs(startDate)) {
-                      Navigator.pop(context, DateRangeOption(startDate: startDate, endDate: endDate));
+                    if (endDate.isAfter(startDate)) {
+                      Navigator.pop(
+                        context,
+                        DateRangeOption(startDate: startDate, endDate: endDate),
+                      );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('A data de fim deve ser após a data de início')),
+                        const SnackBar(
+                          content: Text(
+                            'A data de fim deve ser posterior à data de início',
+                          ),
+                        ),
                       );
                     }
                   },
@@ -675,9 +966,18 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
-                  child: const Text('SALVAR ALTERAÇÕES', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 1.0)),
+                  child: const Text(
+                    'SALVAR ALTERAÇÕES',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -713,23 +1013,35 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               child: Container(
                 width: 40,
                 height: 5,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
             const SizedBox(height: 24),
-            const Text('Adicionar Imagem', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+            const Text(
+              'Adicionar Imagem',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+            ),
             const SizedBox(height: 20),
             _buildShareOption(Icons.link_rounded, 'Inserir URL da imagem', () {
               Navigator.pop(context);
               _showImageUrlDialog();
             }),
             const SizedBox(height: 12),
-            _buildShareOption(Icons.photo_library_rounded, 'Escolher da galeria', () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Funcionalidade em desenvolvimento')),
-              );
-            }),
+            _buildShareOption(
+              Icons.photo_library_rounded,
+              'Escolher da galeria',
+              () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Funcionalidade em desenvolvimento'),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 10),
           ],
         ),
@@ -743,20 +1055,29 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('URL da Imagem', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text(
+          'URL da Imagem',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
         content: TextField(
           controller: urlController,
           decoration: InputDecoration(
             hintText: 'https://exemplo.com/imagem.jpg',
             filled: true,
             fillColor: const Color(0xFFF8F7FF),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -769,9 +1090,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               backgroundColor: const Color(0xFF8B80F9),
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
-            child: const Text('Adicionar', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Adicionar',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -802,7 +1128,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       children: [
         const Text(
           'Locais Sugeridos',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2D2D2D)),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF2D2D2D),
+          ),
         ),
         GestureDetector(
           onTap: _showAddOptionModal,
@@ -818,7 +1148,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 SizedBox(width: 4),
                 Text(
                   'Adicionar',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF8B80F9), fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF8B80F9),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ],
             ),
@@ -838,7 +1172,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
@@ -846,18 +1184,39 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(color: Color(0xFFF8F7FF), shape: BoxShape.circle),
-              child: const Icon(Icons.add_location_alt_rounded, color: Color(0xFF8B80F9), size: 22),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8F7FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.add_location_alt_rounded,
+                color: Color(0xFF8B80F9),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 16),
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Adicionar Novo Local', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF2D2D2D))),
+                Text(
+                  'Adicionar Novo Local',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: Color(0xFF2D2D2D),
+                  ),
+                ),
                 SizedBox(height: 2),
-                Text('Detalhes, custos e cronogramas', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w600)),
+                Text(
+                  'Detalhes, custos e cronogramas',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -883,7 +1242,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         builder: (context, setState) => Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
           ),
           child: SingleChildScrollView(
             padding: EdgeInsets.only(
@@ -910,42 +1272,86 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 const SizedBox(height: 24),
                 const Text(
                   'Novo Local',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2D2D2D), letterSpacing: -0.5),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2D2D2D),
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Imagem do Local (Pequeno)
                 Row(
                   children: [
                     Container(
                       width: 50,
                       height: 50,
-                      decoration: BoxDecoration(color: const Color(0xFFF8F7FF), borderRadius: BorderRadius.circular(16)),
-                      child: const Icon(Icons.image_rounded, color: Color(0xFF8B80F9)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F7FF),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.image_rounded,
+                        color: Color(0xFF8B80F9),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildModalTextFieldSoft(imageUrlController, 'URL da Imagem (Opcional)', 'https://...', isOptional: true),
+                      child: _buildModalTextFieldSoft(
+                        imageUrlController,
+                        'URL da Imagem (Opcional)',
+                        'https://...',
+                        isOptional: true,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                
-                _buildModalTextFieldSoft(titleController, 'Título da Opção *', 'Ex: Opção Luxo'),
+
+                _buildModalTextFieldSoft(
+                  titleController,
+                  'Título da Opção *',
+                  'Ex: Opção Luxo',
+                ),
                 const SizedBox(height: 16),
-                _buildModalTextFieldSoft(venueNameController, 'Nome do Local *', 'Ex: Vila das Dunas Resort'),
+                _buildModalTextFieldSoft(
+                  venueNameController,
+                  'Nome do Local *',
+                  'Ex: Vila das Dunas Resort',
+                ),
                 const SizedBox(height: 16),
-                
+
                 Row(
                   children: [
-                    Expanded(child: _buildModalTextFieldSoft(priceController, 'Preço Total *', 'Ex: 1500', isPrice: true)),
+                    Expanded(
+                      child: _buildModalTextFieldSoft(
+                        priceController,
+                        'Preço Total *',
+                        'Ex: 1500',
+                        isPrice: true,
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildModalTextFieldSoft(priceDetailController, 'Detalhe (Opcional)', 'Ex: / pessoa')),
+                    Expanded(
+                      child: _buildModalTextFieldSoft(
+                        priceDetailController,
+                        'Detalhe (Opcional)',
+                        'Ex: / pessoa',
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                
-                const Text('Cronograma do Local', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF2D2D2D), fontSize: 16)),
+
+                const Text(
+                  'Cronograma do Local',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF2D2D2D),
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 _buildModalTextFieldSoft(
                   TextEditingController(),
@@ -954,41 +1360,81 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   onChanged: (value) => setState(() => scheduleName = value),
                 ),
                 const SizedBox(height: 12),
-                
-                ...scheduleActivities.asMap().entries.map((entry) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: _buildActivityWithTimeItemSoft(scheduleActivities, entry.key, setState),
-                    )),
-                
+
+                ...scheduleActivities.asMap().entries.map(
+                  (entry) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: _buildActivityWithTimeItemSoft(
+                      scheduleActivities,
+                      entry.key,
+                      setState,
+                    ),
+                  ),
+                ),
+
                 TextButton.icon(
-                  onPressed: () => setState(() => scheduleActivities.add(ActivityUI(name: ''))),
+                  onPressed: () => setState(
+                    () => scheduleActivities.add(ActivityUI(name: '')),
+                  ),
                   icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
-                  label: const Text('Adicionar Atividade ao Cronograma', style: TextStyle(fontWeight: FontWeight.w700)),
-                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF8B80F9)),
+                  label: const Text(
+                    'Adicionar Atividade ao Cronograma',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF8B80F9),
+                  ),
                 ),
                 const SizedBox(height: 24),
-                
-                const Text('Atividades Gerais do Local', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF2D2D2D), fontSize: 16)),
-                const SizedBox(height: 12),
-                ...activities.asMap().entries.map((entry) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: _buildActivityItemSoft(activities, entry.key, setState),
-                    )),
-                
-                TextButton.icon(
-                  onPressed: () => setState(() => activities.add(ActivityUI(name: ''))),
-                  icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
-                  label: const Text('Adicionar Atividade Geral', style: TextStyle(fontWeight: FontWeight.w700)),
-                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF8B80F9)),
+
+                const Text(
+                  'Atividades Gerais do Local',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF2D2D2D),
+                    fontSize: 16,
+                  ),
                 ),
-                
+                const SizedBox(height: 12),
+                ...activities.asMap().entries.map(
+                  (entry) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: _buildActivityItemSoft(
+                      activities,
+                      entry.key,
+                      setState,
+                    ),
+                  ),
+                ),
+
+                TextButton.icon(
+                  onPressed: () =>
+                      setState(() => activities.add(ActivityUI(name: ''))),
+                  icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                  label: const Text(
+                    'Adicionar Atividade Geral',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF8B80F9),
+                  ),
+                ),
+
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (_validateVenueForm(titleController, venueNameController, priceController)) {
-                        final priceValue = double.tryParse(priceController.text.replaceAll(',', '.')) ?? 0.0;
+                      if (_validateVenueForm(
+                        titleController,
+                        venueNameController,
+                        priceController,
+                      )) {
+                        final priceValue =
+                            double.tryParse(
+                              priceController.text.replaceAll(',', '.'),
+                            ) ??
+                            0.0;
                         final newOption = VenueOption(
                           id: DateTime.now().millisecondsSinceEpoch.toString(),
                           title: titleController.text,
@@ -996,10 +1442,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                           venueLink: null,
                           price: priceValue,
                           priceDetail: priceDetailController.text,
-                          imageUrl: imageUrlController.text.isNotEmpty ? imageUrlController.text : defaultImages[venueOptions.length % defaultImages.length],
-                          activities: activities.where((a) => a.name.isNotEmpty).toList(),
-                          scheduleName: scheduleName.isNotEmpty ? scheduleName : 'Cronograma Padrão',
-                          scheduleActivities: scheduleActivities.where((a) => a.name.isNotEmpty).toList(),
+                          imageUrl: imageUrlController.text.isNotEmpty
+                              ? imageUrlController.text
+                              : defaultImages[venueOptions.length %
+                                    defaultImages.length],
+                          activities: activities
+                              .where((a) => a.name.isNotEmpty)
+                              .toList(),
+                          scheduleName: scheduleName.isNotEmpty
+                              ? scheduleName
+                              : 'Cronograma Padrão',
+                          scheduleActivities: scheduleActivities
+                              .where((a) => a.name.isNotEmpty)
+                              .toList(),
                           total: priceValue * 1.5,
                         );
                         Navigator.pop(context, newOption);
@@ -1010,9 +1465,18 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 18),
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
-                    child: const Text('ADICIONAR OPÇÃO DE LOCAL', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                    child: const Text(
+                      'ADICIONAR OPÇÃO DE LOCAL',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1043,98 +1507,154 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(
+          color: Colors.grey.shade500,
+          fontWeight: FontWeight.w600,
+        ),
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey.shade400),
         filled: true,
         fillColor: const Color(0xFFF8F7FF),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
       ),
     );
   }
 
-  Widget _buildActivityItemSoft(List<ActivityUI> activities, int index, StateSetter setState) {
+  Widget _buildActivityItemSoft(
+    List<ActivityUI> activities,
+    int index,
+    StateSetter setState,
+  ) {
     return Row(
       children: [
         Expanded(
           child: TextField(
-            onChanged: (value) => setState(() => activities[index].name = value),
+            onChanged: (value) =>
+                setState(() => activities[index].name = value),
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             decoration: InputDecoration(
               hintText: 'Ex: Piscina liberada',
               filled: true,
               fillColor: const Color(0xFFF8F7FF),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
             ),
           ),
         ),
         const SizedBox(width: 8),
         IconButton(
           onPressed: () => setState(() => activities.removeAt(index)),
-          icon: Icon(Icons.remove_circle_outline_rounded, color: Colors.red.shade300),
+          icon: Icon(
+            Icons.remove_circle_outline_rounded,
+            color: Colors.red.shade300,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildActivityWithTimeItemSoft(List<ActivityUI> activities, int index, StateSetter setState) {
+  Widget _buildActivityWithTimeItemSoft(
+    List<ActivityUI> activities,
+    int index,
+    StateSetter setState,
+  ) {
     return Row(
       children: [
         Expanded(
           flex: 2,
           child: TextField(
-            onChanged: (value) => setState(() => activities[index].name = value),
+            onChanged: (value) =>
+                setState(() => activities[index].name = value),
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             decoration: InputDecoration(
               hintText: 'Ex: Check-in',
               filled: true,
               fillColor: const Color(0xFFF8F7FF),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
             ),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: TextField(
-            onChanged: (value) => setState(() => activities[index].time = value),
+            onChanged: (value) =>
+                setState(() => activities[index].time = value),
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             decoration: InputDecoration(
               hintText: '14:00',
               filled: true,
               fillColor: const Color(0xFFF8F7FF),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
             ),
           ),
         ),
         const SizedBox(width: 4),
         IconButton(
           onPressed: () => setState(() => activities.removeAt(index)),
-          icon: Icon(Icons.remove_circle_outline_rounded, color: Colors.red.shade300),
+          icon: Icon(
+            Icons.remove_circle_outline_rounded,
+            color: Colors.red.shade300,
+          ),
         ),
       ],
     );
   }
 
-  bool _validateVenueForm(TextEditingController title, TextEditingController venue, TextEditingController price) {
+  bool _validateVenueForm(
+    TextEditingController title,
+    TextEditingController venue,
+    TextEditingController price,
+  ) {
     if (title.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor, insira um título')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, insira um título')),
+      );
       return false;
     }
     if (venue.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor, insira o nome do local')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, insira o nome do local')),
+      );
       return false;
     }
     if (price.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor, insira o preço')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, insira o preço')),
+      );
       return false;
     }
     final priceValue = double.tryParse(price.text.replaceAll(',', '.'));
     if (priceValue == null || priceValue < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Preço inválido. Use apenas números.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preço inválido. Use apenas números.')),
+      );
       return false;
     }
     return true;
@@ -1147,7 +1667,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -1161,16 +1685,34 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 children: [
                   Text(
                     'OPÇÃO ${venueOptions.indexOf(option) + 1}',
-                    style: const TextStyle(color: Color(0xFF8B80F9), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                    style: const TextStyle(
+                      color: Color(0xFF8B80F9),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(option.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2D2D2D))),
+                  Text(
+                    option.title,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF2D2D2D),
+                    ),
+                  ),
                 ],
               ),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(color: Color(0xFFF8F7FF), shape: BoxShape.circle),
-                child: const Icon(Icons.location_on_rounded, color: Color(0xFF8B80F9)),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8F7FF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.location_on_rounded,
+                  color: Color(0xFF8B80F9),
+                ),
               ),
             ],
           ),
@@ -1178,14 +1720,24 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Detalhes do Local', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF2D2D2D))),
+              const Text(
+                'Detalhes do Local',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF2D2D2D),
+                ),
+              ),
               Row(
                 children: [
                   GestureDetector(
                     onTap: () => _showEditScheduleModal(option),
                     child: Text(
                       'Editar Cronograma',
-                      style: TextStyle(fontWeight: FontWeight.w700, color: const Color(0xFFF9A866), fontSize: 12),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFF9A866),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1193,7 +1745,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     onTap: () => _showEditVenueModal(option),
                     child: const Text(
                       'Alterar Local',
-                      style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF8B80F9), fontSize: 12),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF8B80F9),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -1203,7 +1759,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFFF8F7FF), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F7FF),
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Row(
               children: [
                 ClipRRect(
@@ -1214,7 +1773,15 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     height: 70,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      return Container(width: 70, height: 70, color: Colors.white, child: const Icon(Icons.broken_image, color: Colors.grey));
+                      return Container(
+                        width: 70,
+                        height: 70,
+                        color: Colors.white,
+                        child: const Icon(
+                          Icons.broken_image,
+                          color: Colors.grey,
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -1223,20 +1790,40 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(option.venueName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                      Text(
+                        option.venueName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.baseline,
                         textBaseline: TextBaseline.alphabetic,
                         children: [
-                          Text('R\$ ${option.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF8B80F9))),
+                          Text(
+                            'R\$ ${option.price.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                              color: Color(0xFF8B80F9),
+                            ),
+                          ),
                           const SizedBox(width: 4),
-                          Text(option.priceDetail, style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w600)),
+                          Text(
+                            option.priceDetail,
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -1244,69 +1831,132 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: const Color(0xFFFFF7F0), borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7F0),
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.schedule_rounded, size: 18, color: Color(0xFFF9A866)),
+                      const Icon(
+                        Icons.schedule_rounded,
+                        size: 18,
+                        color: Color(0xFFF9A866),
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         option.scheduleName,
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFF9A866)),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: Color(0xFFF9A866),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ...option.scheduleActivities.map((activity) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            Icon(Icons.circle, size: 6, color: Colors.grey.shade400),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(activity.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
-                            if (activity.time != null)
-                              Text(activity.time!, style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      )),
+                  ...option.scheduleActivities.map(
+                    (activity) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            size: 6,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              activity.name,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          if (activity.time != null)
+                            Text(
+                              activity.time!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
           if (option.activities.isNotEmpty) ...[
             const SizedBox(height: 16),
-            const Text('Atividades do Local', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF2D2D2D))),
+            const Text(
+              'Atividades do Local',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF2D2D2D),
+              ),
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: option.activities.map((activity) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(color: const Color(0xFFF8F7FF), borderRadius: BorderRadius.circular(16)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.celebration_rounded, size: 14, color: Color(0xFF8B80F9)),
-                        const SizedBox(width: 6),
-                        Text(activity.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF8B80F9))),
-                      ],
+              children: option.activities
+                  .map(
+                    (activity) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F7FF),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.celebration_rounded,
+                            size: 14,
+                            color: Color(0xFF8B80F9),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            activity.name,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF8B80F9),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  )).toList(),
+                  )
+                  .toList(),
             ),
-          ]
+          ],
         ],
       ),
     );
   }
 
   void _showEditScheduleModal(VenueOption option) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Edição em breve!')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Edição em breve!')));
   }
 
   void _showEditVenueModal(VenueOption option) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Edição em breve!')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Edição em breve!')));
   }
 
   Widget _buildLaunchEventButton() {
@@ -1315,18 +1965,31 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       child: ElevatedButton.icon(
         onPressed: _isLoading ? null : _launchEvent,
         icon: _isLoading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
             : const Icon(Icons.rocket_launch_rounded, size: 20),
         label: Text(
           _isLoading ? 'CRIANDO...' : 'LANÇAR EVENTO',
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.0,
+          ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF8B80F9),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 20),
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
         ),
       ),
     );
@@ -1342,9 +2005,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(40),
+          topRight: Radius.circular(40),
+        ),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF8B80F9).withOpacity(0.08), blurRadius: 24, offset: const Offset(0, -5)),
+          BoxShadow(
+            color: const Color(0xFF8B80F9).withOpacity(0.08),
+            blurRadius: 24,
+            offset: const Offset(0, -5),
+          ),
         ],
       ),
       child: Row(
@@ -1373,9 +2043,20 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400, size: 26),
+          Icon(
+            icon,
+            color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
+            size: 26,
+          ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400, fontSize: 10, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
