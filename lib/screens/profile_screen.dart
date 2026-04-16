@@ -18,7 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final EventService _eventService = EventService();
   final ImagePicker _picker = ImagePicker();
 
-  int _currentNavIndex = 3;
+  int _currentNavIndex = 2; // Aba "PERFIL" (0: Eventos, 1: Criar, 2: Perfil)
   bool _isLoading = false;
   bool _isUploading = false;
 
@@ -455,30 +455,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ========== BOTTOM NAVIGATION ATUALIZADO ==========
   Widget _buildCustomBottomNav() {
     return Container(
-      padding: const EdgeInsets.only(top: 16, bottom: 32, left: 24, right: 24),
+      padding: const EdgeInsets.only(top: 16, bottom: 32, left: 32, right: 32),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFDFBFF), Color(0xFFF6F3FF)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(40),
           topRight: Radius.circular(40),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
+            color: const Color(0xFF8B80F9).withOpacity(0.08),
+            blurRadius: 24,
             offset: const Offset(0, -5),
           ),
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(Icons.home_filled, 'HOME', 0),
-          _buildCreateNavItem(),
-          _buildNavItem(Icons.people_alt, 'SOCIAL', 2),
-          _buildNavItem(Icons.person, 'PROFILE', 3),
+          _buildNavItem(Icons.calendar_month, 'EVENTOS', 0),
+          _buildNavItem(Icons.add_circle_outline, 'CRIAR', 1),
+          _buildNavItem(Icons.person_outline, 'PERFIL', 2),
         ],
       ),
     );
@@ -488,9 +492,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool isActive = _currentNavIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() => _currentNavIndex = index);
-        if (index == 0) Navigator.pushReplacementNamed(context, '/main');
-        // SOCIAL e outros podem ser adicionados depois
+        if (index == 0) {
+          Navigator.pushReplacementNamed(context, '/main');
+        } else if (index == 1) {
+          Navigator.pushNamed(context, '/create_event');
+        } else if (index == 2) {
+          // Já estamos na tela de perfil, não faz nada
+        }
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -498,7 +506,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Icon(
             icon,
             color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
-            size: 24,
+            size: 26,
           ),
           const SizedBox(height: 4),
           Text(
@@ -510,34 +518,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCreateNavItem() {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/create_event'),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF8B80F9),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add_circle, color: Colors.white),
-            SizedBox(height: 4),
-            Text(
-              'CREATE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

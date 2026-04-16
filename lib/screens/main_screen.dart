@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 import '../models/event.dart';
 import '../services/auth_service.dart';
 import '../services/event_service.dart';
+import '../services/participant_service.dart';
 import 'event_details_screen.dart';
-import 'final_event_screen.dart'; // ← NOVO IMPORT
+import 'final_event_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -20,17 +21,34 @@ class _MainScreenState extends State<MainScreen> {
   String _userName = '';
   final AuthService _authService = AuthService();
   final EventService _eventService = EventService();
+  
+  // Controle da pesquisa
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _loadUserName();
+    
+    // Adiciona listener para detectar mudanças no campo de busca
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
 
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (user != null && mounted) {
         setState(() {});
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserName() async {
@@ -64,17 +82,21 @@ class _MainScreenState extends State<MainScreen> {
 
   void _debugPrintEvents(List<Event> events) {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      print('=== DEBUG MainScreen: Usuário deslogado, ignorando eventos ===');
-      return;
-    }
+    if (user == null) return;
     print('=== DEBUG MainScreen: Eventos para o usuário ${user.uid} ===');
     for (var event in events) {
-      print('Evento: ${event.title}');
-      print('Participantes UIDs: ${event.participants}');
-      print('Status: ${event.status}');
-      print('---');
+      print('Evento: ${event.title} | Status: ${event.status}');
     }
+  }
+
+  String _getDaysLeftText(DateTime targetDate) {
+    final now = DateTime.now();
+    final difference = targetDate.difference(now).inDays;
+    
+    if (difference > 1) return 'Faltam $difference dias';
+    if (difference == 1) return 'Falta 1 dia';
+    if (difference == 0) return 'É hoje!';
+    return 'Encerrado';
   }
 
   @override
@@ -97,6 +119,7 @@ class _MainScreenState extends State<MainScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header Profile
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,7 +129,7 @@ class _MainScreenState extends State<MainScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Hello, $_userName 👋',
+                            'Olá, $_userName 👋',
                             style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
@@ -115,7 +138,7 @@ class _MainScreenState extends State<MainScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            "Let's create amazing experiences\ntogether!",
+                            "Pronto(a) para o próximo evento?",
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey.shade700,
@@ -125,29 +148,26 @@ class _MainScreenState extends State<MainScreen> {
                         ],
                       ),
                     ),
-                    Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 24,
-                          backgroundImage: NetworkImage(
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daEB?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80',
-                          ),
-                        ),
-                      ],
+                    const CircleAvatar(
+                      radius: 24,
+                      backgroundImage: NetworkImage(
+                        'https://images.unsplash.com/photo-1534528741775-53994a69daEB?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80',
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
 
-                // Campo de busca
+                // Campo de busca (AGORA COM FUNCIONALIDADE)
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: TextField(
+                    controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Search events...',
+                      hintText: 'Buscar eventos...',
                       hintStyle: TextStyle(
                         color: Colors.grey.shade400,
                         fontSize: 14,
@@ -157,6 +177,17 @@ class _MainScreenState extends State<MainScreen> {
                         color: Colors.grey.shade400,
                         size: 20,
                       ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear, color: Colors.grey.shade400, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -164,68 +195,35 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Botões de ação
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _ActionButton(
+                // Botões de ação em formato de pílula
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: _PillActionButton(
                         icon: Icons.add,
-                        label: 'Add Events',
-                        backgroundColor: const Color(0xFFE2E0FF),
-                        iconColor: const Color(0xFF8B80F9),
-                        onTap: () =>
-                            Navigator.pushNamed(context, '/create_event'),
+                        label: 'Criar Evento',
+                        backgroundColor: const Color(0xFFE8E2FF),
+                        contentColor: const Color(0xFF6B5DE8),
+                        onTap: () => Navigator.pushNamed(context, '/create_event'),
                       ),
-                      const SizedBox(width: 12),
-                      _ActionButton(
-                        icon: Icons.groups_outlined,
-                        label: 'Invite',
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PillActionButton(
+                        icon: Icons.group_add_outlined,
+                        label: 'Participar',
                         backgroundColor: const Color(0xFFFFF0E3),
-                        iconColor: const Color(0xFFF9A866),
+                        contentColor: const Color(0xFFE58A3E),
                         onTap: () => Navigator.pushNamed(context, '/join'),
                       ),
-                      const SizedBox(width: 12),
-                      _ActionButton(
-                        icon: Icons.check_circle_outline,
-                        label: 'My Tasks',
-                        backgroundColor: const Color(0xFFE0F9ED),
-                        iconColor: const Color(0xFF4AC48B),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Funcionalidade em desenvolvimento',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 12),
-                      _ActionButton(
-                        icon: Icons.notifications_none,
-                        label: 'Notifications',
-                        backgroundColor: const Color(0xFFFFEAE9),
-                        iconColor: const Color(0xFFF28B82),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Funcionalidade em desenvolvimento',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 32),
 
-                // Título "Your Events"
                 const Text(
-                  'Your Events',
+                  'Seus Eventos',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -234,7 +232,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Lista dinâmica de eventos
+                // Lista dinâmica de eventos com filtro
                 StreamBuilder<List<Event>>(
                   stream: _eventService.getUserEvents(),
                   builder: (context, snapshot) {
@@ -248,127 +246,26 @@ class _MainScreenState extends State<MainScreen> {
                     }
 
                     if (snapshot.hasError) {
-                      print(
-                        'DEBUG MainScreen: Erro no StreamBuilder: ${snapshot.error}',
-                      );
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.error_outline,
-                              color: Colors.red,
-                              size: 48,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Erro ao carregar eventos: ${snapshot.error}',
-                              style: const TextStyle(color: Colors.red),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      );
+                      return const Center(child: Text('Erro ao carregar eventos.'));
                     }
 
-                    final events = snapshot.data ?? [];
+                    final allEvents = snapshot.data ?? [];
+                    _debugPrintEvents(allEvents);
 
-                    _debugPrintEvents(events);
+                    // APLICA O FILTRO DE PESQUISA
+                    final filteredEvents = _searchQuery.isEmpty
+                        ? allEvents
+                        : allEvents.where((event) =>
+                            event.title.toLowerCase().contains(_searchQuery)).toList();
 
-                    if (events.isEmpty) {
-                      return Container(
-                        padding: const EdgeInsets.all(32),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.event_busy,
-                                size: 64,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Você ainda não tem eventos.',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey.shade600,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Toque em "Add Events" para criar um!',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade500,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                    if (filteredEvents.isEmpty) {
+                      return _buildEmptyState(_searchQuery.isNotEmpty);
                     }
 
                     return Column(
-                      children: events
-                          .map((event) => _buildEventCard(event))
-                          .toList(),
+                      children: filteredEvents.map((event) => _buildEventCard(event)).toList(),
                     );
                   },
-                ),
-                const SizedBox(height: 24),
-
-                // Título "Recent Activities"
-                const Text(
-                  'Recent Activities',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Container de atividades recentes (estático por enquanto)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Column(
-                    children: [
-                      _ActivityItem(
-                        text:
-                            'The creature voted for the beach for the Trip to Natal event.',
-                        time: '5 hours ago',
-                      ),
-                      _ActivityItem(
-                        text:
-                            'Ana suggested "July 20th" for Aniversário da Ana event.',
-                        time: '3 hours ago',
-                      ),
-                      _ActivityItem(
-                        text: 'João completed "Buy decorations" task',
-                        time: '2 hours ago',
-                      ),
-                      _ActivityItem(
-                        text:
-                            'Maria invited 3 new participants to Projeto Integrador',
-                        time: '1 hour ago',
-                        isLast: true,
-                      ),
-                    ],
-                  ),
                 ),
                 const SizedBox(height: 120),
               ],
@@ -380,46 +277,63 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  Widget _buildEmptyState(bool isSearch) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(isSearch ? Icons.search_off : Icons.event_busy, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              isSearch ? 'Nenhum evento encontrado.' : 'Você ainda não tem eventos.',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEventCard(Event event) {
     Color badgeColor;
     Color badgeTextColor;
-    IconData badgeIcon;
     String badgeText;
 
     switch (event.status) {
       case 'voting':
-        badgeColor = const Color(0xFFFFD48F);
-        badgeTextColor = const Color(0xFFD6942C);
-        badgeIcon = Icons.how_to_vote;
-        badgeText = 'Em votação';
+        badgeColor = Colors.white.withOpacity(0.95);
+        badgeTextColor = const Color(0xFF1976D2);
+        badgeText = 'EM VOTAÇÃO';
         break;
       case 'confirmed':
-        badgeColor = const Color(0xFFB1FFC8);
-        badgeTextColor = const Color(0xFF34A853);
-        badgeIcon = Icons.check_circle;
-        badgeText = 'Confirmado';
+        badgeColor = const Color(0xFF2DCC70);
+        badgeTextColor = Colors.white;
+        badgeText = 'CONFIRMADO';
         break;
       default:
-        badgeColor = const Color(0xFFBBE5FF);
-        badgeTextColor = const Color(0xFF4A90E2);
-        badgeIcon = Icons.edit_calendar;
-        badgeText = 'Planejando';
+        badgeColor = Colors.white.withOpacity(0.95);
+        badgeTextColor = const Color(0xFF8B80F9);
+        badgeText = 'PLANEJANDO';
     }
 
+    final daysLeftText = _getDaysLeftText(event.startDate);
+
     return _EventCard(
+      eventId: event.id,
       imageUrl: event.imageUrl.isNotEmpty
           ? event.imageUrl
-          : 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+          : 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
       title: event.title,
-      date:
-          '${event.startDate.day}/${event.startDate.month} - ${event.endDate.day}/${event.endDate.month}',
-      participants: event.participants.length,
+      timeText: daysLeftText,
       badgeText: badgeText,
       badgeColor: badgeColor,
       badgeTextColor: badgeTextColor,
-      badgeIcon: badgeIcon,
       onTap: () {
-        // Navegação condicional conforme o status do evento
         if (event.status == 'confirmed') {
           Navigator.push(
             context,
@@ -436,28 +350,31 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _buildCustomBottomNav() {
     return Container(
-      padding: const EdgeInsets.only(top: 16, bottom: 32, left: 24, right: 24),
+      padding: const EdgeInsets.only(top: 16, bottom: 32, left: 32, right: 32),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFDFBFF), Color(0xFFF6F3FF)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(40),
           topRight: Radius.circular(40),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
+            color: const Color(0xFF8B80F9).withOpacity(0.08),
+            blurRadius: 24,
             offset: const Offset(0, -5),
           ),
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(Icons.home_filled, 'HOME', 0),
-          _buildCreateNavItem(),
-          _buildNavItem(Icons.people_alt, 'SOCIAL', 2),
-          _buildNavItem(Icons.person, 'PROFILE', 3),
+          _buildNavItem(Icons.calendar_month, 'EVENTOS', 0),
+          _buildNavItem(Icons.add_circle_outline, 'CRIAR', 1),
+          _buildNavItem(Icons.person_outline, 'PERFIL', 2),
         ],
       ),
     );
@@ -467,10 +384,11 @@ class _MainScreenState extends State<MainScreen> {
     bool isActive = _currentNavIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() => _currentNavIndex = index);
         if (index == 0) {
-          // Já está na home
-        } else if (index == 3) {
+          setState(() => _currentNavIndex = index);
+        } else if (index == 1) {
+          Navigator.pushNamed(context, '/create_event');
+        } else if (index == 2) {
           Navigator.pushNamed(context, '/profile');
         }
       },
@@ -480,7 +398,7 @@ class _MainScreenState extends State<MainScreen> {
           Icon(
             icon,
             color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
-            size: 24,
+            size: 26,
           ),
           const SizedBox(height: 4),
           Text(
@@ -495,103 +413,81 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
-
-  Widget _buildCreateNavItem() {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/create_event'),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF8B80F9),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add_circle, color: Colors.white),
-            SizedBox(height: 4),
-            Text(
-              'CREATE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ------------------ Widgets Auxiliares ------------------
 
-class _ActionButton extends StatelessWidget {
+class _PillActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color backgroundColor;
-  final Color iconColor;
+  final Color contentColor;
   final VoidCallback onTap;
 
-  const _ActionButton({
+  const _PillActionButton({
     required this.icon,
     required this.label,
     required this.backgroundColor,
-    required this.iconColor,
+    required this.contentColor,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(30),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: backgroundColor.withOpacity(0.5),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
-            child: Icon(icon, size: 28, color: iconColor),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20, color: contentColor),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: contentColor,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _EventCard extends StatelessWidget {
+  final String eventId;
   final String imageUrl;
   final String title;
-  final String date;
-  final int participants;
+  final String timeText;
   final String badgeText;
   final Color badgeColor;
   final Color badgeTextColor;
-  final IconData badgeIcon;
   final VoidCallback onTap;
 
   const _EventCard({
+    required this.eventId,
     required this.imageUrl,
     required this.title,
-    required this.date,
-    required this.participants,
+    required this.timeText,
     required this.badgeText,
     required this.badgeColor,
     required this.badgeTextColor,
-    required this.badgeIcon,
     required this.onTap,
   });
 
@@ -600,122 +496,145 @@ class _EventCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 24),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFFFBF8F5),
+          borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.network(
-                imageUrl,
-                width: 85,
-                height: 85,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 85,
-                    height: 85,
-                    color: Colors.grey.shade200,
-                    child: Icon(
-                      Icons.event,
-                      color: Colors.grey.shade400,
-                      size: 32,
+            // Imagem Topo + Badge Status
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  child: Image.network(
+                    imageUrl,
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 140,
+                        color: Colors.grey.shade300,
+                        width: double.infinity,
+                        child: const Icon(Icons.image, size: 40, color: Colors.grey),
+                      );
+                    },
+                  ),
+                ),
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  );
-                },
-              ),
+                    child: Text(
+                      badgeText,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                        color: badgeTextColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
+            
+            // Área Branca/Bege Inferior
+            Padding(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 4),
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF2D2D2D),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
+                  
+                  // Ícone de calendário + Dias Restantes
                   Row(
                     children: [
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 14,
-                        color: Colors.grey.shade500,
-                      ),
-                      const SizedBox(width: 4),
+                      Icon(Icons.calendar_month, size: 16, color: Colors.grey.shade600),
+                      const SizedBox(width: 6),
                       Text(
-                        date,
+                        timeText,
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Text(
-                          '|',
-                          style: TextStyle(color: Colors.grey.shade400),
-                        ),
-                      ),
-                      Icon(
-                        Icons.people_alt_outlined,
-                        size: 14,
-                        color: Colors.grey.shade500,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$participants',
-                        style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                           color: Colors.grey.shade600,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: badgeColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(badgeIcon, size: 14, color: badgeTextColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          badgeText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: badgeTextColor,
+                  const SizedBox(height: 20),
+
+                  // Avatares + Total de convidados
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: ParticipantService().getParticipants(eventId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SizedBox(
+                              width: 60,
+                              height: 32,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            Text('CARREGANDO...'),
+                          ],
+                        );
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return const Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Erro ao carregar participantes'),
+                            Text('0 CONVIDADOS'),
+                          ],
+                        );
+                      }
+                      final participants = snapshot.data!;
+                      final totalCount = participants.length;
+                      
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _buildAvatarStack(participants),
+                          Text(
+                            '$totalCount CONVIDADOS',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF9E9E9E),
+                              letterSpacing: 0.5,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -725,59 +644,78 @@ class _EventCard extends StatelessWidget {
       ),
     );
   }
-}
 
-class _ActivityItem extends StatelessWidget {
-  final String text;
-  final String time;
-  final bool isLast;
+  Widget _buildAvatarStack(List<Map<String, dynamic>> participants) {
+    final displayCount = participants.length > 2 ? 2 : participants.length;
+    final extraCount = participants.length - displayCount;
 
-  const _ActivityItem({
-    required this.text,
-    required this.time,
-    this.isLast = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const CircleAvatar(
-            radius: 12,
-            backgroundImage: NetworkImage(
-              'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80',
+    List<Widget> stackChildren = [];
+    
+    for (int i = 0; i < displayCount; i++) {
+      final name = participants[i]['name'] as String? ?? 'Usuário';
+      final initials = _getInitials(name);
+      
+      stackChildren.add(
+        Positioned(
+          left: i * 22.0,
+          child: CircleAvatar(
+            radius: 16,
+            backgroundColor: const Color(0xFFFBF8F5),
+            child: CircleAvatar(
+              radius: 14,
+              backgroundColor: const Color(0xFF8B80F9),
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-                      height: 1.3,
-                    ),
-                  ),
+        ),
+      );
+    }
+    
+    if (extraCount > 0) {
+      stackChildren.add(
+        Positioned(
+          left: displayCount * 22.0,
+          child: CircleAvatar(
+            radius: 16,
+            backgroundColor: const Color(0xFFFBF8F5),
+            child: CircleAvatar(
+              radius: 14,
+              backgroundColor: const Color(0xFFA5B4FC),
+              child: Text(
+                '+$extraCount',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4338CA),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  time,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                ),
-              ],
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+      );
+    }
+
+    final totalWidth = (displayCount * 22.0) + (extraCount > 0 ? 32.0 : 16.0);
+    return SizedBox(
+      width: totalWidth,
+      height: 32,
+      child: Stack(children: stackChildren),
     );
+  }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) {
+      return parts[0].substring(0, 1).toUpperCase();
+    }
+    return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 }

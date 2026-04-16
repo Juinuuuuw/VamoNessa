@@ -22,7 +22,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   final EventService _eventService = EventService();
   final PollService _pollService = PollService();
   final ParticipantService _participantService = ParticipantService();
-  int _currentNavIndex = 0;
+  final int _currentNavIndex = 0; // Aba "Eventos" ativa por padrão
   bool _isConfirming = false;
 
   bool _isEventCreator(Event event) {
@@ -70,9 +70,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erro ao confirmar evento: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao confirmar evento: $e')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isConfirming = false);
@@ -106,30 +106,19 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               final event = eventSnapshot.data!;
               final currentUser = FirebaseAuth.instance.currentUser;
 
-              // Verificação de participante
-              if (currentUser == null ||
-                  !event.participants.contains(currentUser.uid)) {
+              if (currentUser == null || !event.participants.contains(currentUser.uid)) {
                 return _buildNotParticipantView(event);
               }
 
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // AppBar
+                  // AppBar simplificada
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Colors.black87,
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
+                    padding: const EdgeInsets.only(left: 8.0, top: 8.0, right: 24.0),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
+                      onPressed: () => Navigator.pop(context),
                     ),
                   ),
 
@@ -139,14 +128,18 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       padding: const EdgeInsets.only(
                         left: 24.0,
                         right: 24.0,
-                        bottom: 140.0, // era 100.0
+                        bottom: 140.0,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Banner do evento
-                          _buildEventBanner(event),
+                          // Cabeçalho com Título e Ano
+                          _buildScreenHeader(event),
                           const SizedBox(height: 32),
+
+                          // Botão Confirmar Movido para Cima (Design Minimalista e Pastel)
+                          if (_isEventCreator(event) && event.status == 'voting')
+                            _buildMinimalConfirmButton(event),
 
                           // Votação de Locais
                           _buildSectionHeader(
@@ -165,13 +158,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
                           // Tendência do Grupo
                           _buildTrendCard(event),
-                          const SizedBox(height: 24),
-
-                          // Botão Confirmar (somente criador e se estiver em votação)
-                          if (_isEventCreator(event) &&
-                              event.status == 'voting')
-                            _buildConfirmButton(event),
-
                           const SizedBox(height: 32),
 
                           // Participantes
@@ -196,166 +182,91 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  Widget _buildConfirmButton(Event event) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _isConfirming ? null : () => _confirmEvent(event),
-        icon: _isConfirming
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Icon(Icons.check_circle_outline, size: 20),
-        label: Text(
-          _isConfirming ? 'CONFIRMANDO...' : 'CONFIRMAR EVENTO',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF34A853),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ---------- VIEW PARA NÃO PARTICIPANTE ----------
-  Widget _buildNotParticipantView(Event event) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.lock_outline, size: 64, color: Colors.grey.shade400),
-            const SizedBox(height: 24),
-            Text(
-              'Você não está participando deste evento.',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Peça ao organizador para adicionar você à lista de participantes.',
-              style: TextStyle(color: Colors.grey.shade600),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Voltar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ========== BANNER ==========
-  Widget _buildEventBanner(Event event) {
+  // ========== HEADER (TÍTULO E ANO) ==========
+  Widget _buildScreenHeader(Event event) {
     String statusText;
+    Color badgeColor;
+
     switch (event.status) {
       case 'voting':
         statusText = 'EM VOTAÇÃO';
+        badgeColor = const Color(0xFF8B80F9);
         break;
       case 'confirmed':
         statusText = 'CONFIRMADO';
+        badgeColor = const Color(0xFF8B80F9);
         break;
       default:
         statusText = 'PLANEJANDO';
+        badgeColor = const Color(0xFF8B80F9);
     }
 
+    final year = event.startDate.year.toString();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: badgeColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            statusText,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          event.title,
+          style: const TextStyle(
+            fontSize: 34,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF2D2D2D),
+            height: 1.1,
+            letterSpacing: -0.5,
+          ),
+        ),
+        Text(
+          year,
+          style: const TextStyle(
+            fontSize: 34,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF8B80F9), // Cor pastel
+            height: 1.1,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ========== NOVO BOTÃO DE CONFIRMAR (MINIMALISTA E PASTEL) ==========
+  Widget _buildMinimalConfirmButton(Event event) {
     return Container(
-      height: 180,
       width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
-        image: DecorationImage(
-          image: NetworkImage(
-            event.imageUrl.isNotEmpty
-                ? event.imageUrl
-                : 'https://images.unsplash.com/photo-1533174000220-db6fbc4b2da0?q=80&w=600&auto=format&fit=crop',
-          ),
-          fit: BoxFit.cover,
+      margin: const EdgeInsets.only(bottom: 32),
+      child: ElevatedButton.icon(
+        onPressed: _isConfirming ? null : () => _confirmEvent(event),
+        icon: _isConfirming
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2E7D32)))
+            : const Icon(Icons.check_circle_outline, size: 20),
+        label: Text(
+          _isConfirming ? 'PROCESSANDO...' : 'CONFIRMAR EVENTO',
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 0.5),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              const Color(0xFF8B80F9).withOpacity(0.8),
-            ],
-          ),
-        ),
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF8B80F9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                statusText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              event.title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                height: 1.1,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.people_alt, color: Colors.white, size: 14),
-                const SizedBox(width: 6),
-                Text(
-                  '${event.participants.length} Participante(s)',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ],
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFE8F5E9), // Cor verde pastel bem minimalista
+          foregroundColor: const Color(0xFF2E7D32), // Fonte verde escuro elegante
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
       ),
     );
@@ -378,19 +289,224 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       children: venues.map((venue) {
         final hasVoted = _pollService.hasUserVoted(venue.votes);
         return Padding(
-          padding: const EdgeInsets.only(bottom: 20),
-          child: _buildVoteCard(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: _buildVenueCard(
             title: venue.title,
             subtitle: venue.venueName,
             imageUrl: venue.imageUrl,
             votes: venue.votes.length,
             isVotedByMe: hasVoted,
-            onVote: () => _pollService
-                .voteVenue(event.id, venue.id)
-                .then((_) => setState(() {})),
+            price: (venue as dynamic).price ?? 0.0, 
+            onVote: () => _pollService.voteVenue(event.id, venue.id).then((_) => setState(() {})),
           ),
         );
       }).toList(),
+    );
+  }
+
+  // ========== CARD DE VOTAÇÃO DE LOCAL ==========
+  Widget _buildVenueCard({
+    required String title,
+    required String subtitle,
+    required String imageUrl,
+    required int votes,
+    required bool isVotedByMe,
+    required double price, 
+    required VoidCallback onVote,
+  }) {
+    final mockTags = ['Premium', 'Ao ar livre'];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Área da Imagem com Gradiente
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                child: Image.network(
+                  imageUrl.isNotEmpty ? imageUrl : 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205',
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 220,
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.image_not_supported, size: 40),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'OPÇÃO DE LOCAL',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.favorite, size: 14, color: Color(0xFF8B80F9)),
+                      const SizedBox(width: 6),
+                      Text(
+                        '$votes VOTOS',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF8B80F9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // Área Branca Inferior
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Textos do Cronograma Lado a Lado com o Valor
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'CRONOGRAMA SUGERIDO',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.grey.shade500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      'Valor: R\$ ${price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF8B80F9),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle.isNotEmpty ? subtitle : 'Horário a definir com os participantes',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2D2D2D),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Tags
+                Row(
+                  children: mockTags.map((tag) => Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF6F3FF), // Fundo pastel igual ao final_event_screen
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      tag,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF8B80F9),
+                      ),
+                    ),
+                  )).toList(),
+                ),
+                const SizedBox(height: 24),
+
+                // Botão de Votar
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: onVote,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isVotedByMe ? const Color(0xFF8B80F9) : const Color(0xFFFBF8F5),
+                      foregroundColor: isVotedByMe ? Colors.white : const Color(0xFF8B80F9),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: isVotedByMe ? BorderSide.none : BorderSide(color: const Color(0xFF8B80F9).withOpacity(0.2), width: 1.5),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(isVotedByMe ? Icons.check_circle : Icons.how_to_vote, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          isVotedByMe ? 'SEU VOTO FOI REGISTRADO' : 'VOTAR NESTA OPÇÃO',
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -408,10 +524,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       );
     }
     dates.sort((a, b) => a.startDate.compareTo(b.startDate));
-    final maxVotes = dates.fold<int>(
-      0,
-      (max, d) => d.votes.length > max ? d.votes.length : max,
-    );
+    final maxVotes = dates.fold<int>(0, (max, d) => d.votes.length > max ? d.votes.length : max);
 
     return Column(
       children: dates.map((date) {
@@ -423,149 +536,18 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             month: _getMonthAbbr(date.startDate),
             day: date.startDate.day.toString(),
             weekday: _getWeekday(date.startDate),
-            time:
-                '${date.startDate.hour}:${date.startDate.minute.toString().padLeft(2, '0')}',
+            time: '${date.startDate.hour}:${date.startDate.minute.toString().padLeft(2, '0')}',
             votes: date.votes.length,
             isWinner: isWinner,
             isVotedByMe: hasVoted,
-            onVote: () => _pollService
-                .voteDate(event.id, date.id)
-                .then((_) => setState(() {})),
+            onVote: () => _pollService.voteDate(event.id, date.id).then((_) => setState(() {})),
           ),
         );
       }).toList(),
     );
   }
 
-  // ========== WIDGETS DE VOTAÇÃO ==========
-  Widget _buildVoteCard({
-    required String title,
-    required String subtitle,
-    required String imageUrl,
-    required int votes,
-    required bool isVotedByMe,
-    required VoidCallback onVote,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
-                child: Image.network(
-                  imageUrl,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 140,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.image_not_supported, size: 40),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.thumb_up,
-                        size: 12,
-                        color: Color(0xFF8B80F9),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$votes',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF8B80F9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: onVote,
-                    icon: Icon(
-                      isVotedByMe ? Icons.check_circle : Icons.add_circle,
-                      size: 18,
-                    ),
-                    label: Text(
-                      isVotedByMe ? 'Votado' : 'Votar +1',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isVotedByMe
-                          ? const Color(0xFF8B80F9)
-                          : const Color(0xFFF0F4FF),
-                      foregroundColor: isVotedByMe
-                          ? Colors.white
-                          : const Color(0xFF8B80F9),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // ========== CARD DE DATA ATUALIZADO ==========
   Widget _buildDateTile({
     required String month,
     required String day,
@@ -595,7 +577,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: isWinner ? const Color(0xFFE2E0FF) : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
@@ -604,16 +586,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: isWinner
-                        ? const Color(0xFF8B80F9)
-                        : Colors.grey.shade500,
+                    color: isWinner ? const Color(0xFF8B80F9) : Colors.grey.shade500,
                   ),
                 ),
                 Text(
                   day,
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w900,
                     color: isWinner ? const Color(0xFF8B80F9) : Colors.black87,
                   ),
                 ),
@@ -636,11 +616,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 const SizedBox(height: 4),
                 Text(
                   time,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
           ),
+          // Botão de Data Reformulado
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -648,21 +629,29 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 '$votes votos',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isWinner
-                      ? const Color(0xFF8B80F9)
-                      : Colors.grey.shade600,
+                  fontWeight: FontWeight.w800,
+                  color: isWinner ? const Color(0xFF8B80F9) : Colors.grey.shade500,
                 ),
               ),
-              const SizedBox(height: 4),
-              GestureDetector(
-                onTap: onVote,
-                child: Icon(
-                  isVotedByMe ? Icons.check_circle : Icons.add_circle,
-                  color: isVotedByMe
-                      ? const Color(0xFF8B80F9)
-                      : Colors.grey.shade400,
-                  size: 20,
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 32,
+                child: ElevatedButton(
+                  onPressed: onVote,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isVotedByMe ? const Color(0xFF8B80F9) : const Color(0xFFFBF8F5),
+                    foregroundColor: isVotedByMe ? Colors.white : const Color(0xFF8B80F9),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: isVotedByMe ? BorderSide.none : BorderSide(color: const Color(0xFF8B80F9).withOpacity(0.2), width: 1.5),
+                    ),
+                  ),
+                  child: Text(
+                    isVotedByMe ? 'VOTADO' : 'VOTAR',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                  ),
                 ),
               ),
             ],
@@ -672,7 +661,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ========== PARTICIPANTES ==========
+  // ---------- DEMAIS MÉTODOS MANTIDOS SEM ALTERAÇÃO ----------
   Widget _buildParticipantsList(List<String> participantUids) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _participantService.getParticipants(widget.eventId),
@@ -701,20 +690,13 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
                       ],
                     ),
                     child: Icon(Icons.more_horiz, color: Colors.grey.shade400),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Ver +${participants.length - 5}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
+                  Text('Ver +${participants.length - 5}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                 ],
               ),
           ],
@@ -724,32 +706,23 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   Widget _buildParticipantAvatar(Map<String, dynamic> participant) {
-    final uid = participant['uid'] as String;
     final name = participant['name'] as String? ?? 'Usuário';
-
     return Column(
       children: [
         CircleAvatar(
           radius: 28,
           backgroundColor: Colors.white,
-          backgroundImage: NetworkImage(
-            'https://ui-avatars.com/api/?name=$name&background=8B80F9&color=fff&size=56',
-          ),
+          backgroundImage: NetworkImage('https://ui-avatars.com/api/?name=$name&background=E8E2FF&color=6B5DE8&size=56'),
         ),
         const SizedBox(height: 8),
         Text(
           name.length > 10 ? '${name.substring(0, 10)}...' : name,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
       ],
     );
   }
 
-  // ========== TENDÊNCIA ==========
   Widget _buildTrendCard(Event event) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -761,11 +734,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         ),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF8B80F9).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
+          BoxShadow(color: const Color(0xFF8B80F9).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -777,33 +746,19 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               const SizedBox(width: 8),
               Text(
                 'TENDÊNCIA DO GRUPO',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0,
-                ),
+                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0),
               ),
             ],
           ),
           const SizedBox(height: 16),
           Text(
             'Em breve: ${event.title}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              height: 1.1,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.1),
           ),
           const SizedBox(height: 12),
           Text(
             'As votações estão aquecidas! Convide mais amigos para decidir.',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 14,
-              height: 1.4,
-            ),
+            style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.4),
           ),
           const SizedBox(height: 24),
         ],
@@ -811,135 +766,63 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ========== MODAL DE CONVITE ==========
   void _showInviteModal(Event event) async {
     final inviteCode = await _eventService.getOrCreateInviteCode(event.id);
-    final inviteLink = 'vamonessa://invite?code=$inviteCode';
 
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Convidar Participantes',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Compartilhe o código ou link abaixo para que outras pessoas possam entrar no evento.',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 24),
-            // Código de convite
-            const Text(
-              'Código de convite:',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      inviteCode,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 4,
-                        color: Color(0xFF8B80F9),
-                      ),
-                      textAlign: TextAlign.center,
+    if (mounted) {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+        builder: (context) => Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Convidar Participantes', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 8),
+              Text('Compartilhe o código abaixo para que outras pessoas possam entrar.', style: TextStyle(color: Colors.grey.shade600)),
+              const SizedBox(height: 24),
+              const Text('Código de convite:', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(16)),
+                      child: Text(inviteCode, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 4, color: Color(0xFF8B80F9)), textAlign: TextAlign.center),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                IconButton(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: inviteCode));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Código copiado!')),
-                    );
-                  },
-                  icon: const Icon(Icons.copy, color: Color(0xFF8B80F9)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Link de convite
-            const Text(
-              'Link de convite:',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      inviteLink,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade800,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: inviteCode));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Código copiado!')));
+                    },
+                    icon: const Icon(Icons.copy, color: Color(0xFF8B80F9)),
                   ),
-                ),
-                const SizedBox(width: 12),
-                IconButton(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: inviteLink));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Link copiado!')),
-                    );
-                  },
-                  icon: const Icon(Icons.copy, color: Color(0xFF8B80F9)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Botão de fechar
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B80F9),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('OK'),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B80F9),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   // ========== HELPERS ==========
@@ -951,104 +834,73 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   String _getMonthAbbr(DateTime date) {
-    const months = [
-      'JAN',
-      'FEV',
-      'MAR',
-      'ABR',
-      'MAI',
-      'JUN',
-      'JUL',
-      'AGO',
-      'SET',
-      'OUT',
-      'NOV',
-      'DEZ',
-    ];
+    const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
     return months[date.month - 1];
   }
 
   String _getWeekday(DateTime date) {
-    const weekdays = [
-      'Segunda',
-      'Terça',
-      'Quarta',
-      'Quinta',
-      'Sexta',
-      'Sábado',
-      'Domingo',
-    ];
+    const weekdays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
     return weekdays[date.weekday - 1];
   }
 
-  Widget _buildSectionHeader(
-    String title, {
-    String? trailingText,
-    String? trailingAction,
-    VoidCallback? onTrailingActionTap,
-  }) {
+  Widget _buildSectionHeader(String title, {String? trailingText, String? trailingAction, VoidCallback? onTrailingActionTap}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
+        Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF2D2D2D))),
         if (trailingText != null)
-          Text(
-            trailingText,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF8B80F9),
-            ),
-          ),
+          Text(trailingText, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF8B80F9))),
         if (trailingAction != null)
           GestureDetector(
             onTap: onTrailingActionTap,
-            child: Text(
-              trailingAction,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF8B80F9),
-              ),
-            ),
+            child: Text(trailingAction, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF8B80F9))),
           ),
       ],
+    );
+  }
+
+  Widget _buildNotParticipantView(Event event) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 24),
+            Text('Você não está participando deste evento.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade700), textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            Text('Peça ao organizador para adicionar você.', style: TextStyle(color: Colors.grey.shade600), textAlign: TextAlign.center),
+            const SizedBox(height: 32),
+            ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Voltar')),
+          ],
+        ),
+      ),
     );
   }
 
   // ========== BOTTOM NAVIGATION ==========
   Widget _buildCustomBottomNav() {
     return Container(
-      padding: const EdgeInsets.only(top: 16, bottom: 32, left: 24, right: 24),
+      padding: const EdgeInsets.only(top: 16, bottom: 32, left: 32, right: 32),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(40),
-          topRight: Radius.circular(40),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFDFBFF), Color(0xFFF6F3FF)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
+          BoxShadow(color: const Color(0xFF8B80F9).withOpacity(0.08), blurRadius: 24, offset: const Offset(0, -5)),
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(Icons.home_filled, 'HOME', 0),
-          _buildCreateNavItem(),
-          _buildNavItem(Icons.people_alt, 'SOCIAL', 2),
-          _buildNavItem(Icons.person, 'PROFILE', 3),
+          _buildNavItem(Icons.calendar_month, 'EVENTOS', 0),
+          _buildNavItem(Icons.add_circle_outline, 'CRIAR', 1),
+          _buildNavItem(Icons.person_outline, 'PERFIL', 2),
         ],
       ),
     );
@@ -1058,57 +910,21 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     bool isActive = _currentNavIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() => _currentNavIndex = index);
         if (index == 0) {
           Navigator.popUntil(context, (route) => route.isFirst);
+        } else if (index == 1) {
+          Navigator.pushNamed(context, '/create_event');
+        } else if (index == 2) {
+          Navigator.pushNamed(context, '/profile');
         }
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
-            size: 24,
-          ),
+          Icon(icon, color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400, size: 26),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(label, style: TextStyle(color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400, fontSize: 10, fontWeight: FontWeight.bold)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCreateNavItem() {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/create_event'),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF8B80F9),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add_circle, color: Colors.white),
-            SizedBox(height: 4),
-            Text(
-              'CREATE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

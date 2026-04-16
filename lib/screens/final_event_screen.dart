@@ -22,7 +22,7 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
   final TaskService _taskService = TaskService();
   final ParticipantService _participantService = ParticipantService();
   late Future<Event?> _eventFuture;
-  int _currentNavIndex = 0;
+  final int _currentNavIndex = 0;
 
   @override
   void initState() {
@@ -102,25 +102,37 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
               final winningDate = _getWinningDate(event);
 
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildAppBar(),
+                  // Botão de voltar simplificado
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0, top: 8.0, right: 24.0),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      padding: const EdgeInsets.only(
+                        left: 24.0, 
+                        right: 24.0, 
+                        bottom: 140.0,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Cabeçalho com Título e Ano em tons pasteis
+                          _buildScreenHeader(event),
+                          const SizedBox(height: 32),
+
                           _buildMainCard(event, winningVenue, winningDate),
 
                           if (winningVenue != null &&
                               winningVenue.scheduleActivities.isNotEmpty) ...[
                             const SizedBox(height: 24),
                             _buildScheduleSection(winningVenue),
-                          ],
-                          if (winningVenue != null &&
-                              winningVenue.activities.isNotEmpty) ...[
-                            const SizedBox(height: 24),
-                            _buildActivitiesSection(winningVenue),
                           ],
 
                           const SizedBox(height: 32),
@@ -129,7 +141,6 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
                           _buildTasksList(event.id),
                           const SizedBox(height: 32),
                           _buildParticipantsSection(event),
-                          const SizedBox(height: 120),
                         ],
                       ),
                     ),
@@ -144,30 +155,68 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
     );
   }
 
-  Widget _buildAppBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
-            onPressed: () => Navigator.pop(context),
+  // ========== HEADER (TÍTULO E ANO) ==========
+  Widget _buildScreenHeader(Event event) {
+    String statusText;
+    Color badgeColor;
+
+    switch (event.status) {
+      case 'voting':
+        statusText = 'EM VOTAÇÃO';
+        badgeColor = const Color(0xFF8B80F9);
+        break;
+      case 'confirmed':
+        statusText = 'CONFIRMADO';
+        badgeColor = const Color(0xFF8B80F9);
+        break;
+      default:
+        statusText = 'PLANEJANDO';
+        badgeColor = const Color(0xFF8B80F9);
+    }
+
+    final year = event.startDate.year.toString();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: badgeColor,
+            borderRadius: BorderRadius.circular(20),
           ),
-          const Text(
-            'VamoNessa',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF8B80F9),
+          child: Text(
+            statusText,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.black87),
-            onPressed: () {},
+        ),
+        const SizedBox(height: 16),
+        Text(
+          event.title,
+          style: const TextStyle(
+            fontSize: 34,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF2D2D2D),
+            height: 1.1,
+            letterSpacing: -0.5,
           ),
-        ],
-      ),
+        ),
+        Text(
+          year,
+          style: const TextStyle(
+            fontSize: 34,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF8B80F9),
+            height: 1.1,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ],
     );
   }
 
@@ -187,6 +236,10 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
     final totalPrice = venue?.total ?? venue?.price ?? 0.0;
     final dateRange = date != null ? _formatDateRange(date) : 'A definir';
 
+    final List<String> eventTags = (venue != null && venue.activities.isNotEmpty)
+        ? venue.activities.map((a) => a.name).toList()
+        : ['Premium', 'Ao ar livre'];
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -202,7 +255,6 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // PARTE SUPERIOR: Imagem com Textos sobrepostos
           Stack(
             children: [
               ClipRRect(
@@ -267,14 +319,39 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
               ),
             ],
           ),
-          // PARTE INFERIOR: Detalhes brancos (Data e Investimento)
           Padding(
             padding: const EdgeInsets.all(24.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoColumn('DATA & PERÍODO', dateRange),
-                _buildPriceColumn('INVESTIMENTO', totalPrice),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildInfoColumn('DATA & PERÍODO', dateRange),
+                    _buildPriceColumn('INVESTIMENTO', totalPrice),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: eventTags.map((tag) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF6F3FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      tag,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF8B80F9),
+                      ),
+                    ),
+                  )).toList(),
+                ),
               ],
             ),
           ),
@@ -332,7 +409,7 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF2954D1), // Azul similar ao da imagem
+                color: Color(0xFF8B80F9),
               ),
             ),
             Text(
@@ -348,7 +425,6 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
       ],
     );
   }
-  // ==========================================================
 
   Widget _buildScheduleSection(VenueOptionModel venue) {
     return Container(
@@ -400,66 +476,6 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActivitiesSection(VenueOptionModel venue) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Atividades do Local',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: venue.activities
-                .map(
-                  (activity) => Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.celebration_outlined,
-                          size: 14,
-                          color: Color(0xFF8B80F9),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          activity.name,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
           ),
         ],
       ),
@@ -536,7 +552,6 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
       ),
       child: Row(
         children: [
-          // Checkbox de conclusão
           GestureDetector(
             onTap: () {
               _taskService.updateTaskStatus(
@@ -551,7 +566,6 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          // Título e responsável
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,7 +586,6 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
               ],
             ),
           ),
-          // Botão de excluir
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             onPressed: () => _confirmDeleteTask(task),
@@ -607,37 +620,53 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
   }
 
   Widget _buildAddActivityButton() {
-    return GestureDetector(
-      onTap: () => _showAddTaskDialog(),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(
-            color: const Color(0xFF8B80F9).withOpacity(0.5),
-            width: 1,
-          ),
-          borderRadius: BorderRadius.circular(20),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF8B80F9).withOpacity(0.08), 
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF8B80F9).withOpacity(0.2), 
+          width: 1.5,
         ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_circle, size: 20, color: Color(0xFF8B80F9)),
-            SizedBox(width: 8),
-            Text(
-              'Adicionar Nova Atividade',
-              style: TextStyle(
-                color: Color(0xFF8B80F9),
-                fontWeight: FontWeight.bold,
-              ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showAddTaskDialog(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B80F9).withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.add, size: 18, color: Color(0xFF8B80F9)),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'ADICIONAR NOVA ATIVIDADE',
+                  style: TextStyle(
+                    color: Color(0xFF8B80F9),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
+  // ========== MODAL DE ADICIONAR TAREFA MODERNIZADO ==========
   void _showAddTaskDialog() {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
@@ -648,94 +677,127 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent, // Permite as bordas arredondadas sem fundo quadrado
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return Padding(
+            return Container(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
                 left: 24,
                 right: 24,
-                top: 20,
+                top: 12,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Nova Tarefa',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Título',
-                      border: OutlineInputBorder(),
+                  // Handle de arrastar (Pill Minimalista)
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
+                  
+                  const Text(
+                    'Nova Tarefa',
+                    style: TextStyle(
+                      fontSize: 24, 
+                      fontWeight: FontWeight.w900, 
+                      color: Color(0xFF2D2D2D),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Campo Título
+                  TextField(
+                    controller: titleController,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      labelText: 'O que precisa ser feito?',
+                      labelStyle: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+                      filled: true,
+                      fillColor: const Color(0xFFF8F7FF),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Campo Descrição
                   TextField(
                     controller: descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Descrição (opcional)',
-                      border: OutlineInputBorder(),
+                    style: const TextStyle(fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: 'Detalhes (opcional)',
+                      labelStyle: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+                      filled: true,
+                      fillColor: const Color(0xFFF8F7FF),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                     ),
                     maxLines: 2,
                   ),
-                  const SizedBox(height: 12),
-                  // ----- DROPDOWN DE RESPONSÁVEL (COM CARREGAMENTO VISÍVEL) -----
+                  const SizedBox(height: 16),
+                  
+                  // ----- DROPDOWN DE RESPONSÁVEL -----
                   FutureBuilder<List<Map<String, dynamic>>>(
                     future: _participantService.getParticipants(widget.eventId),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Row(
+                        return Container(
+                          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                          decoration: BoxDecoration(color: const Color(0xFFF8F7FF), borderRadius: BorderRadius.circular(20)),
+                          child: const Row(
                             children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
+                              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                               SizedBox(width: 12),
-                              Text('Carregando participantes...'),
+                              Text('Carregando equipe...', style: TextStyle(fontWeight: FontWeight.w600)),
                             ],
                           ),
                         );
                       }
                       if (snapshot.hasError) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(
-                            'Erro ao carregar participantes',
-                            style: TextStyle(color: Colors.red.shade700),
-                          ),
-                        );
+                        return Text('Erro ao carregar participantes', style: TextStyle(color: Colors.red.shade700));
                       }
                       final participants = snapshot.data ?? [];
-                      if (participants.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Text('Nenhum participante disponível.'),
-                        );
-                      }
-                      // Dropdown exibido quando há participantes
+                      
                       return DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Responsável',
-                          border: OutlineInputBorder(),
+                          labelStyle: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+                          filled: true,
+                          fillColor: const Color(0xFFF8F7FF),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                         ),
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade500),
+                        style: const TextStyle(color: Color(0xFF2D2D2D), fontWeight: FontWeight.w600, fontSize: 14),
                         value: selectedUserId,
                         items: [
                           const DropdownMenuItem<String>(
                             value: null,
-                            child: Text('Nenhum (tarefa compartilhada)'),
+                            child: Text('Tarefa compartilhada (Todos)'),
                           ),
                           ...participants.map(
                             (p) => DropdownMenuItem<String>(
@@ -748,9 +810,7 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
                           setState(() {
                             selectedUserId = value;
                             if (value != null) {
-                              final selected = participants.firstWhere(
-                                (p) => p['uid'] == value,
-                              );
+                              final selected = participants.firstWhere((p) => p['uid'] == value);
                               selectedUserName = selected['name'] as String;
                             } else {
                               selectedUserName = null;
@@ -760,43 +820,78 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 12),
-                  // Data limite (mantido como está)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          dueDate == null
-                              ? 'Sem data limite'
-                              : 'Prazo: ${dueDate!.day}/${dueDate!.month}/${dueDate!.year}',
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(
-                              const Duration(days: 365),
+                  const SizedBox(height: 16),
+                  
+                  // Date Picker Botão Modernizado
+                  InkWell(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: const ColorScheme.light(
+                                primary: Color(0xFF8B80F9), 
+                                onPrimary: Colors.white, 
+                                onSurface: Color(0xFF2D2D2D),
+                              ),
                             ),
+                            child: child!,
                           );
-                          if (date != null) setState(() => dueDate = date);
                         },
-                        child: const Text('Selecionar data'),
+                      );
+                      if (date != null) setState(() => dueDate = date);
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      decoration: BoxDecoration(
+                        color: dueDate == null ? const Color(0xFFF8F7FF) : const Color(0xFF8B80F9).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: dueDate != null ? Border.all(color: const Color(0xFF8B80F9).withOpacity(0.3), width: 1.5) : null,
                       ),
-                    ],
+                      child: Row(
+                        children: [
+                          Icon(
+                            dueDate == null ? Icons.calendar_today_rounded : Icons.event_available_rounded, 
+                            color: dueDate == null ? Colors.grey.shade500 : const Color(0xFF8B80F9),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              dueDate == null
+                                  ? 'Definir data limite'
+                                  : 'Prazo: ${dueDate!.day.toString().padLeft(2,'0')}/${dueDate!.month.toString().padLeft(2,'0')}/${dueDate!.year}',
+                              style: TextStyle(
+                                color: dueDate == null ? Colors.grey.shade600 : const Color(0xFF8B80F9),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          if (dueDate != null)
+                            GestureDetector(
+                              onTap: () => setState(() => dueDate = null),
+                              child: Icon(Icons.close_rounded, color: Colors.grey.shade400, size: 20),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
+                  
+                  // Botão Salvar
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () async {
                         if (titleController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('O título é obrigatório'),
-                            ),
+                            const SnackBar(content: Text('O título é obrigatório')),
                           );
                           return;
                         }
@@ -811,21 +906,24 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
                             dueDate: dueDate,
                           );
                         } catch (e) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text('Erro: $e')));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
                         }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF8B80F9),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      child: const Text('Criar Tarefa'),
+                      child: const Text(
+                        'CRIAR TAREFA',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.0),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
                 ],
               ),
             );
@@ -835,41 +933,64 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
     );
   }
 
-  Future<List<Map<String, dynamic>>> _getEventParticipants() async {
-    print('=== Buscando participantes do evento ${widget.eventId} ===');
-    final eventDoc = await FirebaseFirestore.instance
-        .collection('events')
-        .doc(widget.eventId)
-        .get();
-    final participants = List<String>.from(
-      eventDoc.data()?['participants'] ?? [],
-    );
-    print('Participantes UIDs: $participants');
+  // ========== MODAL DE CONVITE ==========
+  void _showInviteModal(Event event) async {
+    final inviteCode = await _eventService.getOrCreateInviteCode(event.id);
 
-    final List<Map<String, dynamic>> result = [];
-    for (var uid in participants) {
-      try {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .get();
-        if (userDoc.exists) {
-          final data = userDoc.data()!;
-          final name = '${data['first_name'] ?? ''} ${data['last_name'] ?? ''}'
-              .trim();
-          print('Usuário $uid: nome="$name"');
-          result.add({'uid': uid, 'name': name.isNotEmpty ? name : uid});
-        } else {
-          print('Usuário $uid não encontrado na coleção users');
-          result.add({'uid': uid, 'name': uid}); // fallback para UID
-        }
-      } catch (e) {
-        print('Erro ao buscar usuário $uid: $e');
-        result.add({'uid': uid, 'name': uid}); // fallback para UID
-      }
+    if (mounted) {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+        builder: (context) => Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Convidar Participantes', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 8),
+              Text('Compartilhe o código abaixo para que outras pessoas possam entrar.', style: TextStyle(color: Colors.grey.shade600)),
+              const SizedBox(height: 24),
+              const Text('Código de convite:', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(16)),
+                      child: Text(inviteCode, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 4, color: Color(0xFF8B80F9)), textAlign: TextAlign.center),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: inviteCode));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Código copiado!')));
+                    },
+                    icon: const Icon(Icons.copy, color: Color(0xFF8B80F9)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B80F9),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
-    print('Resultado final: $result');
-    return result;
   }
 
   Widget _buildParticipantsSection(Event event) {
@@ -886,7 +1007,7 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
           child: Row(
             children: [
               ...event.participants.map((uid) => _buildParticipantCircle(uid)),
-              _buildAddParticipantButton(),
+              _buildAddParticipantButton(event),
             ],
           ),
         ),
@@ -932,9 +1053,9 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
     );
   }
 
-  Widget _buildAddParticipantButton() {
+  Widget _buildAddParticipantButton(Event event) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () => _showInviteModal(event),
       child: Container(
         width: 60,
         height: 60,
@@ -954,30 +1075,27 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
     );
   }
 
+  // ========== BOTTOM NAVIGATION ==========
   Widget _buildCustomBottomNav() {
     return Container(
-      padding: const EdgeInsets.only(top: 16, bottom: 32, left: 24, right: 24),
+      padding: const EdgeInsets.only(top: 16, bottom: 32, left: 32, right: 32),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(40),
-          topRight: Radius.circular(40),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFDFBFF), Color(0xFFF6F3FF)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
+          BoxShadow(color: const Color(0xFF8B80F9).withOpacity(0.08), blurRadius: 24, offset: const Offset(0, -5)),
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(Icons.home_filled, 'HOME', 0),
-          _buildCreateNavItem(),
-          _buildNavItem(Icons.people_alt, 'SOCIAL', 2),
-          _buildNavItem(Icons.person, 'PROFILE', 3),
+          _buildNavItem(Icons.calendar_month, 'EVENTOS', 0),
+          _buildNavItem(Icons.add_circle_outline, 'CRIAR', 1),
+          _buildNavItem(Icons.person_outline, 'PERFIL', 2),
         ],
       ),
     );
@@ -987,55 +1105,21 @@ class _FinalEventScreenState extends State<FinalEventScreen> {
     bool isActive = _currentNavIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() => _currentNavIndex = index);
-        if (index == 0) Navigator.popUntil(context, (route) => route.isFirst);
+        if (index == 0) {
+          Navigator.popUntil(context, (route) => route.isFirst);
+        } else if (index == 1) {
+          Navigator.pushNamed(context, '/create_event');
+        } else if (index == 2) {
+          Navigator.pushNamed(context, '/profile');
+        }
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
-            size: 24,
-          ),
+          Icon(icon, color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400, size: 26),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(label, style: TextStyle(color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400, fontSize: 10, fontWeight: FontWeight.bold)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCreateNavItem() {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/create_event'),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF8B80F9),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add_circle, color: Colors.white),
-            SizedBox(height: 4),
-            Text(
-              'CREATE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
