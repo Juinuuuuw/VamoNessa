@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'signup_screen.dart';
 import 'main_screen.dart';
+import 'loading_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,19 +37,44 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
+    // Exibe a tela de carregamento
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const LoadingScreen(message: 'Fazendo login...')),
+    );
+
+    final startTime = DateTime.now();
+
     try {
       final User? user = await _authService.signIn(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
+      // Garante tempo mínimo de 3 segundos
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      final remaining = 3000 - elapsed;
+      if (remaining > 0) await Future.delayed(Duration(milliseconds: remaining));
+
+      // Remove a tela de loading
+      if (mounted) Navigator.pop(context);
+
       if (user != null && mounted) {
+        // Navega para a MainScreen
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainScreen()),
         );
+      } else {
+        setState(() => _errorMessage = 'Falha no login.');
       }
     } on FirebaseAuthException catch (e) {
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      final remaining = 3000 - elapsed;
+      if (remaining > 0) await Future.delayed(Duration(milliseconds: remaining));
+
+      if (mounted) Navigator.pop(context);
+
       String message = 'Erro ao fazer login.';
       if (e.code == 'user-not-found') {
         message = 'Nenhum usuário encontrado com este e-mail.';
@@ -61,11 +87,14 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       setState(() => _errorMessage = message);
     } catch (e) {
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      final remaining = 3000 - elapsed;
+      if (remaining > 0) await Future.delayed(Duration(milliseconds: remaining));
+
+      if (mounted) Navigator.pop(context);
       setState(() => _errorMessage = 'Ocorreu um erro inesperado.');
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -75,15 +104,14 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // Gradiente de fundo suave já padronizado
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFF7DFCA), // Bege claro
-              Color(0xFFE8E2FF), // Lilás médio
-              Color(0xFFD4C8FF), // Roxo suave
+              Color(0xFFF7DFCA),
+              Color(0xFFE8E2FF),
+              Color(0xFFD4C8FF),
             ],
           ),
         ),
@@ -108,14 +136,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Ícone com a cor pastel do sistema (mesmo do SignUp)
-                    const Icon(Icons.auto_awesome_outlined, size: 44, color: Color(0xFF9575CD)),
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 80,
+                      height: 80,
+                    ),
                     const SizedBox(height: 16),
                     const Text(
                       'Login',
                       style: TextStyle(
-                        fontSize: 28, 
-                        fontWeight: FontWeight.bold, 
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                         color: Color(0xFF2D2D2D),
                         letterSpacing: -0.5,
                       ),
@@ -151,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 24,
                               child: Checkbox(
                                 value: _rememberMe,
-                                activeColor: const Color(0xFF8B80F9), // Checkbox na cor do sistema
+                                activeColor: const Color(0xFF8B80F9),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                 onChanged: (value) => setState(() => _rememberMe = value ?? false),
                               ),
@@ -163,8 +194,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextButton(
                           onPressed: () {},
                           child: const Text(
-                            'Forgot Password?', 
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8B80F9)) // Cor pastel
+                            'Forgot Password?',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8B80F9)),
                           ),
                         ),
                       ],
@@ -176,13 +207,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF8B80F9), // Botão na cor roxo pastel principal
+                          backgroundColor: const Color(0xFF8B80F9),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 0,
                         ),
-                        child: _isLoading 
-                          ? const CircularProgressIndicator(color: Colors.white) 
-                          : const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -205,8 +236,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         GestureDetector(
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUpScreen())),
                           child: const Text(
-                            "Sign Up", 
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF8B80F9)) // Cor pastel
+                            "Sign Up",
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF8B80F9)),
                           ),
                         ),
                       ],
@@ -236,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
         hintText: label,
         hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.5), // Fundo suavizado como no signup
+        fillColor: Colors.white.withOpacity(0.5),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         suffixIcon: suffixIcon,
         border: OutlineInputBorder(
@@ -249,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFD4C8FF)), // Borda focada na cor pastel
+          borderSide: const BorderSide(color: Color(0xFFD4C8FF)),
         ),
       ),
     );

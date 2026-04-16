@@ -8,6 +8,7 @@ import 'screens/create_event_screen.dart';
 import 'screens/event_details_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/join_event_screen.dart';
+import 'screens/loading_screen.dart';
 import 'services/accessibility_settings.dart';
 import 'firebase_options.dart';
 
@@ -21,7 +22,6 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // Tema padrão (modo claro com cores pasteis)
   ThemeData _defaultTheme() {
     return ThemeData(
       brightness: Brightness.light,
@@ -55,7 +55,6 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  // Tema de alto contraste
   ThemeData _highContrastTheme() {
     return ThemeData(
       brightness: Brightness.dark,
@@ -124,14 +123,14 @@ class MyApp extends StatelessWidget {
               home: StreamBuilder<User?>(
                 stream: FirebaseAuth.instance.authStateChanges(),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.active) {
-                    final user = snapshot.data;
-                    if (user == null) return const LoginScreen();
-                    return const MainScreen();
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const LoadingScreen(); // Tela de carregamento inicial
                   }
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
+                  final user = snapshot.data;
+                  if (user == null) {
+                    return const LoginScreen();
+                  }
+                  return const MainScreen();
                 },
               ),
               onGenerateRoute: (settings) {

@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import 'login_screen.dart';
+import 'loading_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -41,6 +43,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _errorMessage = null;
     });
 
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const LoadingScreen(message: 'Criando conta...')),
+    );
+
+    final startTime = DateTime.now();
+
     try {
       final User? user = await _authService.signUp(
         email: _emailController.text.trim(),
@@ -51,10 +60,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
         phone: _phoneController.text.trim(),
       );
 
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      final remaining = 3000 - elapsed;
+      if (remaining > 0) await Future.delayed(Duration(milliseconds: remaining));
+
+      if (mounted) Navigator.pop(context);
+
       if (user != null && mounted) {
-        Navigator.pop(context);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      } else {
+        setState(() => _errorMessage = 'Erro ao criar conta.');
       }
     } catch (e) {
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      final remaining = 3000 - elapsed;
+      if (remaining > 0) await Future.delayed(Duration(milliseconds: remaining));
+
+      if (mounted) Navigator.pop(context);
       setState(() => _errorMessage = 'Erro ao criar conta. Tente novamente.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -81,13 +106,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFF7DFCA), // Pastel Peach
-              Color(0xFFE8E2FF), // Pastel Lavender
-              Color(0xFFD4C8FF), // Soft Purple
+              Color(0xFFF7DFCA),
+              Color(0xFFE8E2FF),
+              Color(0xFFD4C8FF),
             ],
           ),
         ),
-        child: Center( // Center garante que o box fique na mesma posição do Login
+        child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Container(
@@ -108,11 +133,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Espaço reservado para a Logo (Substituindo o ícone anterior)
-                    const Icon(
-                      Icons.auto_awesome_outlined, 
-                      size: 44, 
-                      color: Color(0xFF9575CD), // Roxo pastel
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 80,
+                      height: 80,
                     ),
                     const SizedBox(height: 16),
                     const Text(
@@ -179,7 +203,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _register,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF8B80F9), // Roxo pastel do sistema
+                          backgroundColor: const Color(0xFF8B80F9),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 0,
                         ),
@@ -187,11 +211,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ? const CircularProgressIndicator(color: Colors.white)
                             : const Text(
                                 'Register Now',
-                                style: TextStyle(
-                                  color: Colors.white, 
-                                  fontSize: 16, 
-                                  fontWeight: FontWeight.w600
-                                ),
+                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
                               ),
                       ),
                     ),
@@ -203,8 +223,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: const Text(
-                            "Login", 
-                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B80F9))
+                            "Login",
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B80F9)),
                           ),
                         ),
                       ],
