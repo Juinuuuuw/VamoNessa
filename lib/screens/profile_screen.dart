@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/user_service.dart';
 import '../services/event_service.dart';
+import '../services/accessibility_settings.dart';
 import '../models/user.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -18,7 +19,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final EventService _eventService = EventService();
   final ImagePicker _picker = ImagePicker();
 
-  int _currentNavIndex = 2; // Aba "PERFIL" (0: Eventos, 1: Criar, 2: Perfil)
+  int _currentNavIndex = 2; // Aba "PERFIL"
   bool _isLoading = false;
   bool _isUploading = false;
 
@@ -67,14 +68,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
         _isUploading = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Foto atualizada!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto atualizada!')),
+      );
     } catch (e) {
       setState(() => _isUploading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao enviar foto: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao enviar foto: $e')),
+      );
     }
   }
 
@@ -99,25 +100,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Editar Perfil',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+            const Text('Editar Perfil', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             TextField(
               controller: firstNameController,
-              decoration: const InputDecoration(
-                labelText: 'Nome',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Nome', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: lastNameController,
-              decoration: const InputDecoration(
-                labelText: 'Sobrenome',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Sobrenome', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -141,18 +133,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SnackBar(content: Text('Perfil atualizado!')),
                     );
                   } catch (e) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Erro: $e')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Erro: $e')),
+                    );
                   } finally {
                     setState(() => _isLoading = false);
                   }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B80F9),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text('Salvar'),
               ),
@@ -164,10 +154,195 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ========== MODAL DE ACESSIBILIDADE (TEXT SCALING + HIGH CONTRAST) ==========
+  void _showAccessibilityModal() {
+    double tempScale = AccessibilitySettings.textScaleNotifier.value;
+    bool tempHighContrast = AccessibilitySettings.highContrastNotifier.value;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final isHighContrast = tempHighContrast;
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isHighContrast ? Colors.black : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: isHighContrast ? Colors.yellow : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Acessibilidade',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: isHighContrast ? Colors.yellow : const Color(0xFF2D2D2D),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Ajuste o tamanho da fonte e ative o alto contraste.',
+                    style: TextStyle(
+                      color: isHighContrast ? Colors.white70 : Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // ---- Slider para tamanho da fonte ----
+                  Text(
+                    'Tamanho da Fonte',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: isHighContrast ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.text_fields,
+                        color: isHighContrast ? Colors.yellow : const Color(0xFF8B80F9),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Slider(
+                          value: tempScale,
+                          min: 0.8,
+                          max: 1.5,
+                          divisions: 7,
+                          label: '${tempScale.toStringAsFixed(1)}x',
+                          onChanged: (value) => setState(() => tempScale = value),
+                          activeColor: const Color(0xFF8B80F9),
+                          inactiveColor: isHighContrast ? Colors.grey.shade700 : Colors.grey.shade300,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isHighContrast ? Colors.yellow : const Color(0xFFF0F4FF),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${tempScale.toStringAsFixed(1)}x',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isHighContrast ? Colors.black : const Color(0xFF8B80F9),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ---- Switch para Alto Contraste ----
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Alto Contraste',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: isHighContrast ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Fundo escuro com cores de alto contraste',
+                      style: TextStyle(
+                        color: isHighContrast ? Colors.white70 : Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    value: tempHighContrast,
+                    onChanged: (value) => setState(() => tempHighContrast = value),
+                    activeColor: const Color(0xFF8B80F9),
+                    activeTrackColor: const Color(0xFF8B80F9).withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // ---- Botões ----
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              tempScale = 1.0;
+                              tempHighContrast = false;
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: isHighContrast ? Colors.yellow : Colors.grey.shade400),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: Text(
+                            'Resetar',
+                            style: TextStyle(
+                              color: isHighContrast ? Colors.yellow : Colors.black87,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            await AccessibilitySettings.setTextScale(tempScale);
+                            await AccessibilitySettings.setHighContrast(tempHighContrast);
+                            if (mounted) Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8B80F9),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text(
+                            'Aplicar',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _logout() async {
     await _userService.signOut();
-
-    // Navega para a tela de login e remove todas as rotas anteriores
     if (mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
@@ -175,13 +350,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isHighContrast = AccessibilitySettings.isHighContrast(context);
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF7DFCA), Color(0xFFE8E2FF), Color(0xFFD4C8FF)],
-        ),
+      decoration: BoxDecoration(
+        gradient: isHighContrast
+            ? null
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFF7DFCA), Color(0xFFE8E2FF), Color(0xFFD4C8FF)],
+              ),
+        color: isHighContrast ? Colors.black : null,
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -189,10 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         body: SafeArea(
           bottom: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 32.0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -205,32 +381,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
+                          border: Border.all(color: isHighContrast ? Colors.yellow : Colors.white, width: 4),
+                          boxShadow: isHighContrast
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
                         ),
                         child: CircleAvatar(
                           radius: 56,
-                          backgroundColor: Colors.grey.shade200,
-                          backgroundImage:
-                              _user?.photoUrl != null &&
-                                  _user!.photoUrl!.isNotEmpty
+                          backgroundColor: isHighContrast ? Colors.grey.shade800 : Colors.grey.shade200,
+                          backgroundImage: _user?.photoUrl != null && _user!.photoUrl!.isNotEmpty
                               ? NetworkImage(_user!.photoUrl!)
-                              : const NetworkImage(
-                                      'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
-                                    )
-                                    as ImageProvider,
+                              : const NetworkImage('https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y')
+                                  as ImageProvider,
                           child: _isUploading
                               ? Container(
                                   color: Colors.black26,
-                                  child: const CircularProgressIndicator(
-                                    color: Colors.white,
-                                  ),
+                                  child: const CircularProgressIndicator(color: Colors.white),
                                 )
                               : null,
                         ),
@@ -242,13 +414,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8B80F9),
+                          color: isHighContrast ? Colors.yellow : const Color(0xFF8B80F9),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: isHighContrast ? Colors.black : Colors.white, width: 2),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.camera_alt,
-                          color: Colors.white,
+                          color: isHighContrast ? Colors.black : Colors.white,
                           size: 16,
                         ),
                       ),
@@ -256,36 +428,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Nome e e-mail
                 Text(
                   _user?.displayName ?? 'Carregando...',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: isHighContrast ? Colors.white : Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _user?.email ?? '',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isHighContrast ? Colors.white70 : Colors.grey.shade600,
+                  ),
                 ),
                 const SizedBox(height: 16),
-
-                // Botão Editar Perfil
                 ElevatedButton(
                   onPressed: _showEditProfileModal,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8B80F9),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
+                    backgroundColor: isHighContrast ? Colors.yellow : const Color(0xFF8B80F9),
+                    foregroundColor: isHighContrast ? Colors.black : Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                   ),
                   child: const Text(
                     'Edit Profile',
@@ -299,37 +465,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 160,
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isHighContrast ? Colors.grey.shade900 : Colors.white,
                     borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+                    boxShadow: isHighContrast
+                        ? []
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                   ),
                   child: Column(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE8E2FF),
+                          color: isHighContrast ? Colors.yellow : const Color(0xFFE8E2FF),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.calendar_month,
-                          color: Color(0xFF8B80F9),
+                          color: isHighContrast ? Colors.black : const Color(0xFF8B80F9),
                           size: 24,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         '$_eventCount',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: isHighContrast ? Colors.white : Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -338,7 +506,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade500,
+                          color: isHighContrast ? Colors.white70 : Colors.grey.shade500,
                           letterSpacing: 1.2,
                         ),
                       ),
@@ -355,7 +523,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade600,
+                      color: isHighContrast ? Colors.yellow : Colors.grey.shade600,
                       letterSpacing: 1.5,
                     ),
                   ),
@@ -364,42 +532,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isHighContrast ? Colors.grey.shade900 : Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
+                    boxShadow: isHighContrast
+                        ? []
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                   ),
                   child: Column(
                     children: [
                       _buildPreferenceItem(
                         icon: Icons.accessibility_new_rounded,
                         title: 'Acessibilidade',
-                        onTap: () {},
+                        isHighContrast: isHighContrast,
+                        onTap: _showAccessibilityModal,
                       ),
                       Divider(
                         height: 1,
-                        color: Colors.grey.shade100,
+                        color: isHighContrast ? Colors.grey.shade700 : Colors.grey.shade100,
                         indent: 64,
                       ),
                       _buildPreferenceItem(
                         icon: Icons.help_outline_rounded,
                         title: 'Ajuda',
+                        isHighContrast: isHighContrast,
                         onTap: () {},
                       ),
                       Divider(
                         height: 1,
-                        color: Colors.grey.shade100,
+                        color: isHighContrast ? Colors.grey.shade700 : Colors.grey.shade100,
                         indent: 64,
                       ),
                       _buildPreferenceItem(
                         icon: Icons.logout_rounded,
                         title: 'Sair',
                         isDestructive: true,
+                        isHighContrast: isHighContrast,
                         onTap: _logout,
                       ),
                     ],
@@ -410,7 +583,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
-        bottomNavigationBar: _buildCustomBottomNav(),
+        bottomNavigationBar: _buildCustomBottomNav(isHighContrast),
       ),
     );
   }
@@ -420,75 +593,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String title,
     required VoidCallback onTap,
     bool isDestructive = false,
+    required bool isHighContrast,
   }) {
     final Color itemColor = isDestructive
-        ? Colors.red.shade400
-        : Colors.black87;
+        ? (isHighContrast ? Colors.redAccent : Colors.red.shade400)
+        : (isHighContrast ? Colors.white : Colors.black87);
     final Color iconBgColor = isDestructive
-        ? Colors.red.shade50
-        : Colors.grey.shade100;
+        ? (isHighContrast ? Colors.red.shade900 : Colors.red.shade50)
+        : (isHighContrast ? Colors.grey.shade800 : Colors.grey.shade100);
+    final Color iconColor = isDestructive
+        ? (isHighContrast ? Colors.redAccent : Colors.red.shade400)
+        : (isHighContrast ? Colors.yellow : Colors.grey.shade600);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(color: iconBgColor, shape: BoxShape.circle),
-        child: Icon(
-          icon,
-          color: isDestructive ? Colors.red.shade400 : Colors.grey.shade600,
-          size: 22,
-        ),
+        child: Icon(icon, color: iconColor, size: 22),
       ),
       title: Text(
         title,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: itemColor,
-        ),
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: itemColor),
       ),
       trailing: Icon(
         Icons.arrow_forward_ios_rounded,
         size: 16,
-        color: isDestructive ? Colors.red.shade300 : Colors.grey.shade400,
+        color: isDestructive
+            ? (isHighContrast ? Colors.redAccent : Colors.red.shade300)
+            : (isHighContrast ? Colors.white70 : Colors.grey.shade400),
       ),
       onTap: onTap,
     );
   }
 
-  // ========== BOTTOM NAVIGATION ATUALIZADO ==========
-  Widget _buildCustomBottomNav() {
+  Widget _buildCustomBottomNav(bool isHighContrast) {
     return Container(
       padding: const EdgeInsets.only(top: 16, bottom: 32, left: 32, right: 32),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFDFBFF), Color(0xFFF6F3FF)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(40),
-          topRight: Radius.circular(40),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF8B80F9).withOpacity(0.08),
-            blurRadius: 24,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        gradient: isHighContrast
+            ? null
+            : const LinearGradient(
+                colors: [Color(0xFFFDFBFF), Color(0xFFF6F3FF)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+        color: isHighContrast ? Colors.black : null,
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
+        boxShadow: isHighContrast
+            ? []
+            : [
+                BoxShadow(
+                  color: const Color(0xFF8B80F9).withOpacity(0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, -5),
+                ),
+              ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildNavItem(Icons.calendar_month, 'EVENTOS', 0),
-          _buildNavItem(Icons.add_circle_outline, 'CRIAR', 1),
-          _buildNavItem(Icons.person_outline, 'PERFIL', 2),
+          _buildNavItem(Icons.calendar_month, 'EVENTOS', 0, isHighContrast),
+          _buildNavItem(Icons.add_circle_outline, 'CRIAR', 1, isHighContrast),
+          _buildNavItem(Icons.person_outline, 'PERFIL', 2, isHighContrast),
         ],
       ),
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index) {
+  Widget _buildNavItem(IconData icon, String label, int index, bool isHighContrast) {
     bool isActive = _currentNavIndex == index;
     return GestureDetector(
       onTap: () {
@@ -497,7 +669,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         } else if (index == 1) {
           Navigator.pushNamed(context, '/create_event');
         } else if (index == 2) {
-          // Já estamos na tela de perfil, não faz nada
+          // já está na tela de perfil
         }
       },
       child: Column(
@@ -505,14 +677,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Icon(
             icon,
-            color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
+            color: isActive
+                ? (isHighContrast ? Colors.yellow : const Color(0xFF8B80F9))
+                : (isHighContrast ? Colors.white70 : Colors.grey.shade400),
             size: 26,
           ),
           const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
-              color: isActive ? const Color(0xFF8B80F9) : Colors.grey.shade400,
+              color: isActive
+                  ? (isHighContrast ? Colors.yellow : const Color(0xFF8B80F9))
+                  : (isHighContrast ? Colors.white70 : Colors.grey.shade400),
               fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
