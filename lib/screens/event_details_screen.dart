@@ -4,10 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/event.dart';
-import '../models/task.dart'; // necessário para a seção de tarefas
+import '../models/task.dart';
 import '../services/event_service.dart';
 import '../services/poll_service.dart';
-import '../services/task_service.dart'; // necessário para a seção de tarefas
+import '../services/task_service.dart';
+import 'final_event_screen.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   final String eventId;
@@ -23,6 +24,59 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   final PollService _pollService = PollService();
   final TaskService _taskService = TaskService();
   int _currentNavIndex = 0;
+  bool _isConfirming = false;
+
+  bool _isEventCreator(Event event) {
+    final user = FirebaseAuth.instance.currentUser;
+    return user != null && event.createdBy == user.uid;
+  }
+
+  Future<void> _confirmEvent(Event event) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar evento'),
+        content: const Text(
+          'Ao confirmar, o evento sairá do modo de votação e será definitivo. '
+          'Os participantes não poderão mais votar. Deseja continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF34A853)),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isConfirming = true);
+    try {
+      await _eventService.confirmEvent(event.id);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FinalEventScreen(eventId: event.id),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao confirmar evento: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isConfirming = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +147,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           _buildEventBanner(event),
                           const SizedBox(height: 32),
 
-                          // Votação de Locais (usando dados do evento)
+                          // Votação de Locais
                           _buildSectionHeader(
                             'Votação de Locais',
                             trailingText: _calculateDaysLeft(event.endDate),
@@ -102,7 +156,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           _buildVenueOptionsSection(event),
                           const SizedBox(height: 32),
 
-                          // Votação de Datas (usando dados do evento)
+                          // Votação de Datas
                           _buildSectionHeader('Datas'),
                           const SizedBox(height: 16),
                           _buildDateOptionsSection(event),
@@ -110,6 +164,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
                           // Tendência do Grupo
                           _buildTrendCard(event),
+                          const SizedBox(height: 24),
+
+                          // Botão Confirmar (somente criador e se estiver em votação)
+                          if (_isEventCreator(event) && event.status == 'voting')
+                            _buildConfirmButton(event),
+
                           const SizedBox(height: 32),
 
                           // Participantes
@@ -121,7 +181,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           const SizedBox(height: 16),
                           _buildParticipantsList(event.participants),
 
-                          // Seção de Tarefas (NOVO - adicionado da primeira versão)
+                          // Seção de Tarefas
                           const SizedBox(height: 32),
                           _buildTasksSection(event.id),
                         ],
@@ -135,6 +195,32 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         ),
       ),
       bottomNavigationBar: _buildCustomBottomNav(),
+    );
+  }
+
+  Widget _buildConfirmButton(Event event) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _isConfirming ? null : () => _confirmEvent(event),
+        icon: _isConfirming
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : const Icon(Icons.check_circle_outline, size: 20),
+        label: Text(
+          _isConfirming ? 'CONFIRMANDO...' : 'CONFIRMAR EVENTO',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF34A853),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        ),
+      ),
     );
   }
 
@@ -272,7 +358,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ---------- SEÇÃO DE LOCAIS (usando venueOptions do evento) ----------
+  // ---------- SEÇÃO DE LOCAIS ----------
   Widget _buildVenueOptionsSection(Event event) {
     final venues = event.venueOptions ?? [];
     if (venues.isEmpty) {
@@ -305,7 +391,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ---------- SEÇÃO DE DATAS (usando dateOptions do evento) ----------
+  // ---------- SEÇÃO DE DATAS ----------
   Widget _buildDateOptionsSection(Event event) {
     final dates = event.dateOptions ?? [];
     if (dates.isEmpty) {
@@ -318,7 +404,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         child: const Center(child: Text('Nenhuma data proposta.')),
       );
     }
-    // Ordenar por data de início
     dates.sort((a, b) => a.startDate.compareTo(b.startDate));
     final maxVotes = dates.fold<int>(
       0,
@@ -722,7 +807,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // ========== SEÇÃO DE TAREFAS (da primeira versão) ==========
+  // ========== SEÇÃO DE TAREFAS ==========
   Widget _buildTasksSection(String eventId) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1026,7 +1111,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   // ========== MODAL DE CONVITE ==========
   void _showInviteModal(Event event) async {
     final inviteCode = await _eventService.getOrCreateInviteCode(event.id);
-    final inviteLink = 'vamonessa://invite?code=$inviteCode'; // deep link
+    final inviteLink = 'vamonessa://invite?code=$inviteCode';
 
     showModalBottomSheet(
       context: context,

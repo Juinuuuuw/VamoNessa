@@ -136,12 +136,10 @@ class EventService {
   }
 
   /// Ingressa em um evento usando código de convite
-  /// 🟢 ALTERADO: não lê o documento, apenas atualiza com arrayUnion
   Future<bool> joinEventWithCode(String inviteCode) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Usuário não autenticado');
 
-    // Consulta permitida (list)
     final query = await _firestore
         .collection('events')
         .where('inviteCode', isEqualTo: inviteCode)
@@ -152,11 +150,16 @@ class EventService {
 
     final eventRef = query.docs.first.reference;
 
-    // Atualiza sem ler o documento (usa arrayUnion)
     await eventRef.update({
       'participants': FieldValue.arrayUnion([user.uid])
     });
 
     return true;
+  }
+
+  /// Confirma o evento, mudando o status para 'confirmed'
+  Future<void> confirmEvent(String eventId) async {
+    final eventRef = _firestore.collection('events').doc(eventId);
+    await eventRef.update({'status': 'confirmed'});
   }
 }

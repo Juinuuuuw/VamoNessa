@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../models/event.dart';
 import '../services/auth_service.dart';
 import '../services/event_service.dart';
+import 'event_details_screen.dart';
+import 'final_event_screen.dart'; // ← NOVO IMPORT
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -24,12 +26,9 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _loadUserName();
 
-    // Listener para mudanças de autenticação
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (user != null && mounted) {
-        setState(() {
-          // Força a reconstrução do StreamBuilder
-        });
+        setState(() {});
       }
     });
   }
@@ -194,7 +193,6 @@ class _MainScreenState extends State<MainScreen> {
                         backgroundColor: const Color(0xFFE0F9ED),
                         iconColor: const Color(0xFF4AC48B),
                         onTap: () {
-                          // TODO: implementar tarefas
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
@@ -211,7 +209,6 @@ class _MainScreenState extends State<MainScreen> {
                         backgroundColor: const Color(0xFFFFEAE9),
                         iconColor: const Color(0xFFF28B82),
                         onTap: () {
-                          // TODO: implementar notificações
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
@@ -280,7 +277,6 @@ class _MainScreenState extends State<MainScreen> {
 
                     final events = snapshot.data ?? [];
 
-                    // Debug
                     _debugPrintEvents(events);
 
                     if (events.isEmpty) {
@@ -374,20 +370,17 @@ class _MainScreenState extends State<MainScreen> {
                     ],
                   ),
                 ),
-                // Espaço extra para o footer flutuante
                 const SizedBox(height: 120),
               ],
             ),
           ),
         ),
-        // Barra de navegação inferior personalizada
         bottomNavigationBar: _buildCustomBottomNav(),
       ),
     );
   }
 
   Widget _buildEventCard(Event event) {
-    // Define cores e ícones baseados no status
     Color badgeColor;
     Color badgeTextColor;
     IconData badgeIcon;
@@ -426,7 +419,17 @@ class _MainScreenState extends State<MainScreen> {
       badgeTextColor: badgeTextColor,
       badgeIcon: badgeIcon,
       onTap: () {
-        Navigator.pushNamed(context, '/inside_event', arguments: event.id);
+        // Navegação condicional conforme o status do evento
+        if (event.status == 'confirmed') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FinalEventScreen(eventId: event.id),
+            ),
+          );
+        } else {
+          Navigator.pushNamed(context, '/inside_event', arguments: event.id);
+        }
       },
     );
   }
@@ -465,13 +468,11 @@ class _MainScreenState extends State<MainScreen> {
     return GestureDetector(
       onTap: () {
         setState(() => _currentNavIndex = index);
-        // Navegação para as telas correspondentes
         if (index == 0) {
-          // Já está na home, opcional
+          // Já está na home
         } else if (index == 3) {
           Navigator.pushNamed(context, '/profile');
         }
-        // Se houver outras telas (ex: SOCIAL), adicione aqui
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
