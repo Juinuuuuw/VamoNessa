@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
-import 'loading_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -43,13 +42,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _errorMessage = null;
     });
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const LoadingScreen(message: 'Criando conta...')),
-    );
-
-    final startTime = DateTime.now();
-
     try {
       final User? user = await _authService.signUp(
         email: _emailController.text.trim(),
@@ -60,26 +52,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
         phone: _phoneController.text.trim(),
       );
 
-      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
-      final remaining = 3000 - elapsed;
-      if (remaining > 0) await Future.delayed(Duration(milliseconds: remaining));
-
-      if (mounted) Navigator.pop(context);
-
       if (user != null && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
+        // Aguarda 3 segundos antes de navegar para a LoginScreen
+        await Future.delayed(const Duration(seconds: 3));
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        }
       } else {
         setState(() => _errorMessage = 'Erro ao criar conta.');
       }
     } catch (e) {
-      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
-      final remaining = 3000 - elapsed;
-      if (remaining > 0) await Future.delayed(Duration(milliseconds: remaining));
-
-      if (mounted) Navigator.pop(context);
       setState(() => _errorMessage = 'Erro ao criar conta. Tente novamente.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -95,146 +80,178 @@ class _SignUpScreenState extends State<SignUpScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black54, size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
         ),
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF7DFCA),
-              Color(0xFFE8E2FF),
-              Color(0xFFD4C8FF),
-            ],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
+      body: Stack(
+        children: [
+          // Conteúdo principal (gradiente + formulário)
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFF7DFCA),
+                  Color(0xFFE8E2FF),
+                  Color(0xFFD4C8FF),
                 ],
               ),
-              child: Form(
-                key: _formKey,
+            ),
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/images/logo.png',
+                          width: 80,
+                          height: 80,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Create Account',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D2D2D),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _firstNameController,
+                                label: 'First Name',
+                                icon: Icons.person_outline,
+                                validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _lastNameController,
+                                label: 'Last Name',
+                                icon: Icons.person_outline,
+                                validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _emailController,
+                          label: 'E-mail',
+                          icon: Icons.email_outlined,
+                          validator: (v) => v!.isEmpty ? 'E-mail obrigatório' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _phoneController,
+                          label: 'Phone',
+                          icon: Icons.phone_outlined,
+                          validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          icon: Icons.lock_outline,
+                          obscureText: true,
+                          validator: (v) => v!.length < 6 ? 'Mínimo 6 caracteres' : null,
+                        ),
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 16),
+                          Text(_errorMessage!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                        ],
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 55,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF8B80F9),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 0,
+                            ),
+                            child: _isLoading
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : const Text(
+                                    'Register Now',
+                                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text("Already have an account? ", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                            GestureDetector(
+                              onTap: _isLoading ? null : () => Navigator.pop(context),
+                              child: const Text(
+                                "Login",
+                                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B80F9)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Overlay de loading (fundo branco com logo)
+          if (_isLoading)
+            Container(
+              color: Colors.white, // Fundo branco sólido
+              child: Center(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset(
-                      'assets/images/logo.png',
-                      width: 80,
-                      height: 80,
+                      'assets/images/logo_loading.png',
+                      width: 120,
+                      height: 120,
+                    ),
+                    const SizedBox(height: 24),
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B80F9)),
+                      strokeWidth: 3,
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Create Account',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D2D2D),
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            controller: _firstNameController,
-                            label: 'First Name',
-                            icon: Icons.person_outline,
-                            validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTextField(
-                            controller: _lastNameController,
-                            label: 'Last Name',
-                            icon: Icons.person_outline,
-                            validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _emailController,
-                      label: 'E-mail',
-                      icon: Icons.email_outlined,
-                      validator: (v) => v!.isEmpty ? 'E-mail obrigatório' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _phoneController,
-                      label: 'Phone',
-                      icon: Icons.phone_outlined,
-                      validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      icon: Icons.lock_outline,
-                      obscureText: true,
-                      validator: (v) => v!.length < 6 ? 'Mínimo 6 caracteres' : null,
-                    ),
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 16),
-                      Text(_errorMessage!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
-                    ],
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF8B80F9),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 0,
-                        ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                                'Register Now',
-                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Already have an account? ", style: TextStyle(color: Colors.grey, fontSize: 13)),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: const Text(
-                            "Login",
-                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B80F9)),
-                          ),
-                        ),
-                      ],
+                      'Criando conta...',
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -250,6 +267,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       controller: controller,
       obscureText: obscureText,
       validator: validator,
+      enabled: !_isLoading, // desabilita durante o loading
       style: const TextStyle(fontSize: 14),
       decoration: InputDecoration(
         prefixIcon: Icon(icon, size: 18, color: Colors.grey.shade400),
